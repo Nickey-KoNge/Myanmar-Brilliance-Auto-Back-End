@@ -1,26 +1,37 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Company } from './entities/company.entity';
 import { CreateCompanyDto } from './dto/create-company.dto';
+import { UpdateCompanyDto } from './dto/update-company.dto';
 
 @Injectable()
 export class CompanyService {
   constructor(
     @InjectRepository(Company)
-    private companyRepository: Repository<Company>,
+    private companyRepo: Repository<Company>,
   ) {}
 
-  async create(createCompanyDto: CreateCompanyDto) {
-    try {
-      const company = this.companyRepository.create(createCompanyDto);
-      return await this.companyRepository.save(company);
-    } catch (error) {
-      // Handle unique constraint violations for reg_number, phone, or email
-      if (error.code === '23505') {
-        throw new ConflictException('Company with this Registration, Phone, or Email already exists');
-      }
-      throw error;
-    }
+  create(dto: CreateCompanyDto) {
+    const company = this.companyRepo.create(dto);
+    return this.companyRepo.save(company);
+  }
+
+  findAll() {
+    return this.companyRepo.find();
+  }
+
+  findOne(id: string) {
+    return this.companyRepo.findOne({ where: { id } });
+  }
+
+  async update(id: string, dto: UpdateCompanyDto) {
+    await this.companyRepo.update(id, dto);
+    return this.findOne(id);
+  }
+
+  remove(id: string) {
+    return this.companyRepo.delete(id);
   }
 }

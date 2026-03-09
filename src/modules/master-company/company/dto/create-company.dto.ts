@@ -1,13 +1,17 @@
 export class CreateCompanyDto {
   companyName: string;
   regNumber: string;
-  phone: string;
-  email: string;
-  country: string;
-  city: string;
   streetAddress: string;
+  city: string;
+  country: string;
+  phone: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone: string;
   websiteUrl?: string;
-  establishYear: string; // Will be converted to Date
-  regExpDate: string; // Will be converted to Date
+  establishYear?: Date;
+  regExpDate?: Date;
+  image?: string;
+  email: string;
   status?: string;
 }

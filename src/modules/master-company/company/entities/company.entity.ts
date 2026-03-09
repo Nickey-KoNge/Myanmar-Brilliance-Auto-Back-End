@@ -1,56 +1,59 @@
 import {
   Entity,
   Column,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  DeleteDateColumn,
-  Index,
-  PrimaryColumn,
 } from 'typeorm';
 
-@Entity({ name: 'company', schema: 'master_company' })
+@Entity('company')
 export class Company {
-  @PrimaryColumn({
-    type: 'uuid',
-    default: () => 'uuid_generate_v7()',
-  })
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Index() // Matching the index from your migration
   @Column({ name: 'company_name', length: 100 })
   companyName: string;
 
-  @Column({ name: 'reg_number', length: 50, unique: true })
+  @Column({ name: 'reg_number', length: 50 })
   regNumber: string;
-
-  @Column({ length: 20, unique: true })
-  phone: string;
-
-  @Column({ length: 100, unique: true })
-  email: string;
-
-  @Column({ length: 50 })
-  country: string;
-
-  @Column({ length: 50 })
-  city: string;
 
   @Column({ name: 'street_address', length: 100 })
   streetAddress: string;
 
+  @Column({ length: 50 })
+  city: string;
+
+  @Column({ length: 50 })
+  country: string;
+
+  @Column({ length: 20 })
+  phone: string;
+
+  @Column({ name: 'owner_name', length: 100 })
+  ownerName: string;
+
+  @Column({ name: 'owner_email', length: 100 })
+  ownerEmail: string;
+
+  @Column({ name: 'owner_phone', length: 20 })
+  ownerPhone: string;
+
   @Column({ name: 'website_url', length: 100, nullable: true })
   websiteUrl: string;
 
-  @Column({ name: 'establish_year', type: 'date' })
+  @Column({ name: 'establish_year', type: 'date', nullable: true })
   establishYear: Date;
 
-  @Column({ name: 'reg_exp_date', type: 'date' })
+  @Column({ name: 'reg_exp_date', type: 'date', nullable: true })
   regExpDate: Date;
 
-  @Column({ length: 500, nullable: true })
+  @Column({ name: 'image', length: 100, nullable: true })
   image: string;
 
-  @Column({ length: 20, default: 'Active' })
+  @Column({ length: 100 })
+  email: string;
+
+  @Column({ length: 20, default: 'active' })
   status: string;
 
   @CreateDateColumn({ name: 'created_at' })
@@ -58,7 +61,4 @@ export class Company {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
-
-  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
-  deletedAt: Date;
 }
