@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { dataSourceOptions } from './database/typeorm.config';
 import { ConfigModule } from '@nestjs/config';
 // import { CommonModule } from './common/common.module';
+import { MasterCompanyBranchesModule } from './modules/master-company/branches/master-company.branches.module';
 
 // import { MasterCompanyCompanyModule } from './modules/master-company/company/master-company.company.module';
 
@@ -17,6 +18,7 @@ import { ConfigModule } from '@nestjs/config';
       ...dataSourceOptions,
       autoLoadEntities: true,
     }),
+    MasterCompanyBranchesModule,
     // MasterCompanyCompanyModule,
 
     ServeStaticModule.forRoot({
