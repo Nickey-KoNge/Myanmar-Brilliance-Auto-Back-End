@@ -39,6 +39,7 @@ export class OpService {
 
     return await repository.save(entity);
   }
+  
   async remove<T extends ObjectLiteral>(
     repository: Repository<T>,
     id: string,

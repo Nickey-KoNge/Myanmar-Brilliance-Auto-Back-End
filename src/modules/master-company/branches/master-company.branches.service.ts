@@ -7,19 +7,25 @@ import { BranchesEntity } from './entities/branches.entity';
 import { Create } from 'sharp';
 import { CreateBranchesDto } from './dtos/create-branches.dto';
 import { UpdateBranchesDto } from './dtos/update-branches.dto';
+import { OpService } from '../../../common/service/op.service';
 
 @Injectable()
 export class MasterCompanyBranchesService {
 
     constructor(
+        
+        private readonly opService: OpService,
+
         @InjectRepository(BranchesEntity)
         private readonly branchesRepository: Repository<BranchesEntity>
     ){}
 
 
     async create(dto:CreateBranchesDto):Promise<BranchesEntity>{
-        const branch=this.branchesRepository.create(dto);
-        return await this.branchesRepository.save(branch);
+        // const branch=this.branchesRepository.create(dto);
+        // return await this.branchesRepository.save(branch);
+        return await this.opService.create<BranchesEntity>(this.branchesRepository, dto);
+       
     }
 
 

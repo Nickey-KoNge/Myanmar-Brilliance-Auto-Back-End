@@ -1,7 +1,8 @@
-import { Column, CreateDateColumn, Entity, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, UpdateDateColumn } from "typeorm";
+import { Company } from "../../company/entities/company.entity";
 
 // src/modules/master-company/branches/entities/branches.entity.ts
-@Entity('branches')
+@Entity({name:'branches',schema:'master_company'})
 export class BranchesEntity {
 
     @Column({
@@ -65,10 +66,15 @@ export class BranchesEntity {
     })
     state:string;
 
-    @Column({
-        type:'varchar',
-        length:50
+   @Column({
+        type:'uuid'
     })
     company_id:string;
+
+
+    // @ManyToOne(()=>Company,(company)=>company.branches);
+    // @JoinColumn({name:'company_id'})
+    // company:Company;
+
 
 }
