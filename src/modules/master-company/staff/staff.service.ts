@@ -1,10 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import { Staff } from './entities/staff.entity';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Staff } from './entities/staff.entity';
-import { Repository } from 'typeorm';
 import { CredentialsService } from '../credential/credential.service';
+import { IFileService } from 'src/common/service/i-file.service';
+import { OptimizeImageService } from 'src/common/service/optimize-image.service';
+import { OpService } from 'src/common/service/op.service';
 
 @Injectable()
 export class StaffService {
@@ -12,78 +20,131 @@ export class StaffService {
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
     private readonly credentialService: CredentialsService,
+    private readonly dataSource: DataSource,
+
+    @Inject(IFileService)
+    private readonly fileService: IFileService,
+    private readonly opService: OpService,
+    private readonly optimizeImageService: OptimizeImageService,
   ) {}
 
-  async create(createStaffDto: CreateStaffDto) {
+  async create(
+    createStaffDto: CreateStaffDto,
+    file: Express.Multer.File,
+  ): Promise<Staff> {
+    let imageUrl: string | undefined;
+
+    const { email, password, company, branch, role, ...staffData } =
+      createStaffDto;
+
     const credential = await this.credentialService.register({
-      email: createStaffDto.email,
-      password: createStaffDto.password,
+      email,
+      password,
     });
+
+    if (file) {
+      const optimizedFile = await this.optimizeImageService.optimizeImage(file);
+      imageUrl = await this.fileService.uploadFile(optimizedFile, 'staff');
+    }
 
     const staff = this.staffRepository.create({
-      staffName: createStaffDto.staffName,
-      phone: createStaffDto.phone,
-      position: createStaffDto.position,
+      ...staffData,
+      image: imageUrl,
       credential: { id: credential.id },
-      company: { id: createStaffDto.company },
+      company: { id: company },
+      branch: { id: branch },
+      role: { id: role },
     });
 
-    return this.staffRepository.save(staff);
+    try {
+      return await this.opService.create<Staff>(this.staffRepository, {
+        ...staff,
+      });
+    } catch (error) {
+      throw new BadRequestException(
+        `Registration not Success! ${error}, Re-check Staff Registration Information.`,
+      );
+    }
   }
 
-  findAll() {
-    return this.staffRepository.find({ relations: ['company', 'credential'] });
+  async findAll(): Promise<Staff[]> {
+    return this.staffRepository.find({
+      relations: {
+        company: true,
+        credential: true,
+        branch: true,
+        role: true,
+      },
+    });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<Staff> {
     const staff = await this.staffRepository.findOne({
       where: { id },
-      relations: ['company', 'credential'],
+      relations: {
+        company: true,
+        credential: true,
+        branch: true,
+        role: true,
+      },
     });
 
     if (!staff) {
-      throw new NotFoundException('Staff not found');
+      throw new NotFoundException(`Staff not found`);
     }
 
     return staff;
   }
 
-  async update(id: string, updateStaffDto: UpdateStaffDto) {
-    const staff = await this.staffRepository.findOne({
-      where: { id },
-      relations: ['credential', 'company'],
-    });
+  async update(
+    id: string,
+    updateStaffDto: UpdateStaffDto,
+    file?: Express.Multer.File,
+  ): Promise<Staff> {
+    const staff = await this.findOne(id);
 
-    if (!staff) throw new NotFoundException('Staff not found');
+    const { email, password, company, branch, role, ...staffData } =
+      updateStaffDto;
 
-    staff.staffName = updateStaffDto.staffName ?? staff.staffName;
-    staff.phone = updateStaffDto.phone ?? staff.phone;
-    staff.position = updateStaffDto.position ?? staff.position;
-    staff.status = updateStaffDto.status ?? staff.status;
-
-    if (updateStaffDto.company) {
-      staff.company = { id: updateStaffDto.company } as any;
+    if (!staff) {
+      throw new NotFoundException('Staff not found');
     }
 
-    if ((updateStaffDto.email || updateStaffDto.password) && staff.credential) {
+    Object.assign(staff, staffData);
+
+    if (company) {
+      staff.company = { id: company } as Staff['company'];
+    }
+
+    if (branch) {
+      staff.branch = { id: branch } as Staff['branch'];
+    }
+
+    if (role) {
+      staff.role = { id: role } as Staff['role'];
+    }
+
+    if (file) {
+      if (staff.image) {
+        await this.fileService.deleteFile(staff.image);
+      }
+
+      const optimizedFile = await this.optimizeImageService.optimizeImage(file);
+      staff.image = await this.fileService.uploadFile(optimizedFile, 'staff');
+    }
+
+    if ((email || password) && staff.credential) {
       await this.credentialService.updateCredential(
         staff.credential.id,
-        updateStaffDto.email,
-        updateStaffDto.password,
+        email,
+        password,
       );
     }
 
-    await this.staffRepository.save(staff);
-
-    const updatedStaff = await this.staffRepository.findOne({
-      where: { id },
-      relations: ['credential', 'company'],
-    });
-
-    return updatedStaff;
+    return await this.opService.update<Staff>(this.staffRepository, id, staff);
   }
 
-  async remove(id: string) {
+  async remove(id: string): Promise<Staff> {
     const staff = await this.staffRepository.findOne({
       where: { id },
       relations: ['credential'],
@@ -93,12 +154,14 @@ export class StaffService {
       throw new NotFoundException('Staff not found');
     }
 
+    if (staff.image) {
+      await this.fileService.deleteFile(staff.image);
+    }
+
     if (staff.credential) {
       await this.credentialService.deleteCredential(staff.credential.id);
     }
 
-    await this.staffRepository.delete(id);
-
-    return { message: 'Staff deleted successfully' };
+    return await this.opService.remove<Staff>(this.staffRepository, id);
   }
 }

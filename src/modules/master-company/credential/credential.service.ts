@@ -1,14 +1,15 @@
 import {
   Injectable,
-  ConflictException,
   UnauthorizedException,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
 import { Credential } from './entities/credential.entity';
-import { Staff } from '../staff/entities/staff.entity';
 import { JwtService } from '@nestjs/jwt';
 import { RefreshToken } from './entities/refresh-token.entity';
 
@@ -19,16 +20,9 @@ export class CredentialsService {
     private jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<Credential> {
     // 1. Hash the password before saving
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    const credential = await this.dataSource.getRepository(Credential).save({
-      email: dto.email,
-      password: hashedPassword,
-    });
-
-    return credential;
+    // const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     // 2. Use a transaction to create both records
     // return await this.dataSource.transaction(async (manager) => {
@@ -53,33 +47,92 @@ export class CredentialsService {
     //     throw error;
     //   }
     // });
-  }
 
-  async updateCredential(id: string, email?: string, password?: string) {
     const credentialRepo = this.dataSource.getRepository(Credential);
 
-    const credential = await credentialRepo.findOne({
-      where: { id },
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dto.email)) {
+      throw new BadRequestException('Invalid email format');
+    }
+
+    if (!dto.password || dto.password.length < 6) {
+      throw new BadRequestException(
+        'Password must be at least 6 characters long',
+      );
+    }
+
+    const existing = await credentialRepo.findOne({
+      where: { email: dto.email },
     });
 
+    if (existing) {
+      throw new BadRequestException('Email already in use');
+    }
+
+    try {
+      const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+      const credential = credentialRepo.create({
+        email: dto.email,
+        password: hashedPassword,
+      });
+
+      return await credentialRepo.save(credential);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to create credential');
+    }
+  }
+
+  async updateCredential(
+    id: string,
+    email?: string,
+    password?: string,
+  ): Promise<Credential> {
+    const credentialRepo = this.dataSource.getRepository(Credential);
+
+    const credential = await credentialRepo.findOne({ where: { id } });
     if (!credential) {
-      throw new UnauthorizedException('Credential not found');
+      throw new NotFoundException('Credential not found');
     }
 
     if (email) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new BadRequestException('Invalid email format');
+      }
+
+      const existing = await credentialRepo.findOne({ where: { email } });
+      if (existing && existing.id !== id) {
+        throw new BadRequestException('Email already in use');
+      }
+
       credential.email = email;
     }
 
     if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      credential.password = hashedPassword;
+      if (password.length < 6) {
+        throw new BadRequestException(
+          'Password must be at least 6 characters long',
+        );
+      }
+
+      credential.password = await bcrypt.hash(password, 10);
     }
 
-    return credentialRepo.save(credential);
+    try {
+      return await credentialRepo.save(credential);
+    } catch (error) {
+      console.error('Error updating credential:', error);
+      throw new InternalServerErrorException('Failed to update credential');
+    }
   }
 
-  async deleteCredential(id: string) {
-    return this.dataSource.getRepository(Credential).delete(id);
+  async deleteCredential(id: string): Promise<void> {
+    const credentialRepo = this.dataSource.getRepository(Credential);
+
+    const result = await credentialRepo.delete(id);
+
+    if (result.affected === 0) {
+      throw new NotFoundException('Credential not found');
+    }
   }
 
   async login(dto: LoginDto) {

@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { StaffService } from './staff.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
-@Controller('staff')
+@Controller('master-company/staff')
 export class StaffController {
   constructor(private readonly staffService: StaffService) {}
 
   @Post()
-  create(@Body() createStaffDto: CreateStaffDto) {
-    return this.staffService.create(createStaffDto);
+  @UseInterceptors(FileInterceptor('image'))
+  create(
+    @Body() createStaffDto: CreateStaffDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.staffService.create(createStaffDto, file);
   }
 
   @Get()
@@ -23,8 +38,13 @@ export class StaffController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateStaffDto: UpdateStaffDto) {
-    return this.staffService.update(id, updateStaffDto);
+  @UseInterceptors(FileInterceptor('image'))
+  update(
+    @Param('id') id: string,
+    @Body() updateStaffDto: UpdateStaffDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.staffService.update(id, updateStaffDto, file);
   }
 
   @Delete(':id')

@@ -5,11 +5,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Staff } from './entities/staff.entity';
 import { Credential } from '../credential/entities/credential.entity';
 import { CredentialModule } from '../credential/credential.module';
+import { FileServiceProvider } from 'src/common/service/file.service';
+import { OptimizeImageService } from 'src/common/service/optimize-image.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Staff,Credential]), CredentialModule],
+  imports: [TypeOrmModule.forFeature([Staff, Credential]), CredentialModule],
   controllers: [StaffController],
-  providers: [StaffService],
-  exports: [StaffService]
+  providers: [StaffService, FileServiceProvider, OptimizeImageService],
+  exports: [StaffService],
 })
 export class StaffModule {}

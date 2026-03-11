@@ -1,8 +1,14 @@
-//src/modules/master-company/staff/dtos/create-staff.dto.ts
-import { IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsEmail,
+  IsDateString,
+} from 'class-validator';
+
 export class CreateStaffDto {
+  @IsEmail()
   @IsNotEmpty()
-  @IsString()
   email: string;
 
   @IsNotEmpty()
@@ -13,23 +19,58 @@ export class CreateStaffDto {
   @IsString()
   staffName: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   phone?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   position?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   status?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  credential: string;
+  credential?: string;
 
   @IsNotEmpty()
   @IsString()
   company: string;
+
+  @IsNotEmpty()
+  @IsString()
+  branch: string;
+
+  @IsNotEmpty()
+  @IsString()
+  role: string;
+
+  @IsNotEmpty()
+  @IsString()
+  street_address: string;
+
+  @IsNotEmpty()
+  @IsString()
+  city: string;
+
+  @IsNotEmpty()
+  @IsString()
+  country: string;
+
+  @IsNotEmpty()
+  @IsDateString()
+  dob: string;
+
+  @IsNotEmpty()
+  @IsString()
+  nrc: string;
+
+  @IsNotEmpty()
+  @IsString()
+  gender: string;
+
+  @IsOptional()
+  image?: any;
 }
