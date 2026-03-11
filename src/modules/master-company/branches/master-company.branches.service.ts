@@ -19,17 +19,18 @@ export class MasterCompanyBranchesService {
   ) {}
 
   async create(dto: CreateBranchesDto): Promise<Branches> {
-    // const branch=this.branchesRepository.create(dto);
-    // return await this.branchesRepository.save(branch);
+  
     return await this.opService.create<Branches>(this.branchesRepository, dto);
   }
 
   async findAll(): Promise<Branches[]> {
-    return await this.branchesRepository.find();
+    return await this.branchesRepository.find({relations: ['company', 'staff', 'stations']});
   }
 
   async findOne(id: string): Promise<Branches> {
-    const branch = await this.branchesRepository.findOne({ where: { id } });
+    const branch = await this.branchesRepository.findOne({ where: { id },
+      relations: ['company', 'staff', 'stations'] });
+      
     if (!branch) {
       throw new NotFoundException('Branch not found');
     }
@@ -38,12 +39,12 @@ export class MasterCompanyBranchesService {
 
   async update(id: string, dto: UpdateBranchesDto): Promise<Branches> {
     await this.findOne(id);
-    await this.branchesRepository.update(id, dto);
+    await this.opService.update<Branches>(this.branchesRepository, id, dto);
     return await this.findOne(id);
   }
 
   async remove(id: string): Promise<Branches> {
     const branch = await this.findOne(id);
-    return await this.branchesRepository.remove(branch);
+    return await this.opService.remove<Branches>(this.branchesRepository, id);
   }
 }

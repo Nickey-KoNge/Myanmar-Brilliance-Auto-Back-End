@@ -34,12 +34,14 @@ export class CompanyService {
       take: limit,
     });
   }
+
   async findByIds(ids: string[]): Promise<Company[]> {
     if (!ids || ids.length === 0) return [];
     return await this.companyRepo.find({
       where: { id: In(ids) },
     });
   }
+  
   async create(
     createCompanyDto: CreateCompanyDto,
     file: Express.Multer.File,

@@ -32,7 +32,7 @@ export class CreateBranchesDto {
 
   @IsNotEmpty()
   @IsString()
-  state: string;
+  division: string;
 
   @IsNotEmpty()
   @IsString()
