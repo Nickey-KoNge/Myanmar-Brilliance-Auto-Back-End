@@ -1,5 +1,5 @@
 //src/modules/master-company/company/dtos/create-company.dto.ts
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateCompanyDto {
   @IsNotEmpty()
@@ -16,6 +16,7 @@ export class CreateCompanyDto {
 
   @IsNotEmpty()
   @IsString()
+  @IsOptional()
   email: string;
 
   @IsNotEmpty()
@@ -56,9 +57,11 @@ export class CreateCompanyDto {
 
   @IsNotEmpty()
   @IsString()
+  @IsOptional()
   image: string;
 
   @IsNotEmpty()
   @IsString()
+  @IsOptional()
   status: string;
 }
