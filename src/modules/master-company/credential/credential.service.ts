@@ -4,6 +4,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -141,6 +142,7 @@ export class CredentialsService {
   }
 
   async login(dto: LoginDto) {
+    console.log(dto.email);
     const user = await this.dataSource.getRepository(Credential).findOne({
       where: { email: dto.email },
       relations: ['staff', 'staff.company'],
@@ -171,7 +173,7 @@ export class CredentialsService {
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(
         { sub: userId, email, companyId },
-        { secret: 'AT_SECRET', expiresIn: '15m' }, // Use env variables in production
+        { secret: 'AT_SECRET', expiresIn: '10m' }, // Use env variables in production
       ),
       this.jwtService.signAsync(
         { sub: userId, email, companyId },
@@ -192,5 +194,46 @@ export class CredentialsService {
       expiresAt: expiryDate,
       credential: { id: userId },
     });
+  }
+
+  async refreshTokens(userId: string, refreshToken: string) {
+    const user = await this.dataSource.getRepository(Credential).findOne({
+      where: { id: userId },
+      relations: ['staff', 'staff.company'],
+    });
+
+    if (!user) throw new ForbiddenException('Access Denied');
+
+    // ၁။ Database ထဲမှ သိမ်းထားသော Token ကို ယူသည်
+    const rtRepo = this.dataSource.getRepository(RefreshToken);
+    const storedToken = await rtRepo.findOne({
+      where: { credential: { id: userId } },
+      order: { createdAt: 'DESC' }, // နောက်ဆုံးထုတ်ထားသော token ကိုယူရန်
+    });
+
+    // ၂။ Token ရှိမရှိ နှင့် သက်တမ်းကုန်မကုန် စစ်သည်
+    if (!storedToken || new Date() > storedToken.expiresAt) {
+      throw new UnauthorizedException(
+        'Refresh token expired. Please login again.',
+      );
+    }
+
+    // ၃။ အရေးကြီးဆုံးအချက်: ပို့လိုက်သော Token နှင့် DB ထဲက Hash တူမတူ bcrypt ဖြင့် စစ်ရမည်
+    const isMatch = await bcrypt.compare(refreshToken, storedToken.token);
+    if (!isMatch) {
+      throw new UnauthorizedException('Invalid Refresh Token');
+    }
+
+    // ၄။ Token အသစ်ပြန်ထုတ်ပေးခြင်း
+    const tokens = await this.getTokens(
+      user.id,
+      user.email,
+      user.staff.company.id,
+    );
+
+    // ၅။ DB ထဲတွင် token အသစ်ကို update လုပ်သည်
+    await this.updateRefreshToken(user.id, tokens.refresh_token);
+
+    return tokens;
   }
 }

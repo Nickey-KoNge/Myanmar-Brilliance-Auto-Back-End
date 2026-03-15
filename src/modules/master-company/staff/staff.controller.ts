@@ -8,13 +8,16 @@ import {
   Delete,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { StaffService } from './staff.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { AtGuard } from '../../../common/guards/at.guard';
 
 @Controller('master-company/staff')
+@UseGuards(AtGuard)
 export class StaffController {
   constructor(private readonly staffService: StaffService) {}
 
