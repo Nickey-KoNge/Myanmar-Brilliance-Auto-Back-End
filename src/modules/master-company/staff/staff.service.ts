@@ -85,43 +85,6 @@ export class StaffService {
       await queryRunner.release();
     }
   }
-
-  // async findAll(): Promise<Staff[]> {
-  //   return this.staffRepository.find({
-  //     relations: {
-  //       company: true,
-  //       credential: true,
-  //       branch: true,
-  //       role: true,
-  //     },
-  //     select: {
-  //       id: true,
-  //       staffName: true,
-  //       phone: true,
-  //       position: true,
-  //       image: true,
-  //       status: true,
-  //       credential: {
-  //         id: true,
-  //         email: true,
-  //       },
-  //       branch: {
-  //         id: true,
-  //         branches_name: true,
-  //       },
-  //       company: {
-  //         id: true,
-  //         company_name: true,
-  //         phone: true,
-  //       },
-  //       role: {
-  //         id: true,
-  //         role_name: true,
-  //       },
-  //     },
-  //   });
-  // }
-
   async findAll(query: PaginateStaffDto) {
     const {
       page,
@@ -137,13 +100,8 @@ export class StaffService {
     } = query;
 
     const queryBuilder = this.staffRepository.createQueryBuilder('staff');
-    //use if you want only fk from other table
-    // queryBuilder
-    //   .loadRelationIdAndMap('staff.company_id', 'staff.company')
-    //   .loadRelationIdAndMap('staff.branches_id', 'staff.branch')
-    //   .loadRelationIdAndMap('staff.role_id', 'staff.role');
-
     queryBuilder
+      .leftJoinAndSelect('staff.credential', 'credential')
       .leftJoinAndSelect('staff.company', 'company')
       .leftJoinAndSelect('staff.branch', 'branch')
       .leftJoinAndSelect('staff.role', 'role');
@@ -217,6 +175,7 @@ export class StaffService {
       street_address: staff.street_address,
       city: staff.city,
       country: staff.country,
+      email: staff.credential?.email || null,
 
       company_id: staff.company?.id || null,
       company_name: staff.company?.company_name || null,
@@ -273,25 +232,18 @@ export class StaffService {
         id: true,
         staffName: true,
         phone: true,
+        nrc: true,
         position: true,
         image: true,
         status: true,
+        city: true,
+        country: true,
+        street_address: true,
+        dob: true,
+        gender: true,
         credential: {
           id: true,
           email: true,
-        },
-        branch: {
-          id: true,
-          branches_name: true,
-        },
-        company: {
-          id: true,
-          company_name: true,
-          phone: true,
-        },
-        role: {
-          id: true,
-          role_name: true,
         },
       },
     });
@@ -308,15 +260,24 @@ export class StaffService {
     updateStaffDto: UpdateStaffDto,
     file?: Express.Multer.File,
   ): Promise<Staff> {
-    const staff = await this.findOne(id);
-
-    const { email, password, company, branch, role, ...staffData } =
-      updateStaffDto;
-
+    const staff = await this.staffRepository.findOne({
+      where: { id },
+      relations: ['credential', 'company', 'branch', 'role'],
+    });
     if (!staff) {
       throw new NotFoundException('Staff not found');
     }
 
+    const { email, password, company, branch, role, ...staffData } =
+      updateStaffDto;
+
+    if ((email || password) && staff.credential) {
+      await this.credentialService.updateCredential(
+        staff.credential.id,
+        email,
+        password,
+      );
+    }
     Object.assign(staff, staffData);
 
     if (company) {
@@ -339,16 +300,9 @@ export class StaffService {
       const optimizedFile = await this.optimizeImageService.optimizeImage(file);
       staff.image = await this.fileService.uploadFile(optimizedFile, 'staff');
     }
+    await this.opService.update<Staff>(this.staffRepository, id, staff);
 
-    if ((email || password) && staff.credential) {
-      await this.credentialService.updateCredential(
-        staff.credential.id,
-        email,
-        password,
-      );
-    }
-
-    return await this.opService.update<Staff>(this.staffRepository, id, staff);
+    return await this.findOne(id);
   }
 
   async remove(id: string): Promise<Staff> {

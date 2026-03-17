@@ -88,6 +88,53 @@ export class CredentialsService {
     }
   }
 
+  // async updateCredential(
+  //   id: string,
+  //   email?: string,
+  //   password?: string,
+  // ): Promise<Credential> {
+  //   const credentialRepo = this.dataSource.getRepository(Credential);
+
+  //   const credential = await credentialRepo.findOne({ where: { id } });
+  //   if (!credential) {
+  //     throw new NotFoundException('Credential not found');
+  //   }
+
+  //   if (email) {
+  //     if (email !== credential.email) {
+  //       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  //         throw new BadRequestException('Invalid email format');
+  //       }
+
+  //       const existing = await credentialRepo.findOne({ where: { email } });
+  //       if (existing) {
+  //         throw new BadRequestException(
+  //           'Email already in use by another account',
+  //         );
+  //       }
+
+  //       credential.email = email;
+  //     }
+  //   }
+
+  //   if (password) {
+  //     if (password.length < 6) {
+  //       throw new BadRequestException(
+  //         'Password must be at least 6 characters long',
+  //       );
+  //     }
+
+  //     credential.password = await bcrypt.hash(password, 10);
+  //   }
+
+  //   try {
+  //     return await credentialRepo.save(credential);
+  //   } catch (error) {
+  //     console.error('Error updating credential:', error);
+  //     throw new InternalServerErrorException('Failed to update credential');
+  //   }
+  // }
+
   async updateCredential(
     id: string,
     email?: string,
@@ -96,39 +143,35 @@ export class CredentialsService {
     const credentialRepo = this.dataSource.getRepository(Credential);
 
     const credential = await credentialRepo.findOne({ where: { id } });
-    if (!credential) {
-      throw new NotFoundException('Credential not found');
-    }
+
+    if (!credential) throw new NotFoundException('Credential not found');
 
     if (email) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new BadRequestException('Invalid email format');
-      }
+      if (email !== credential.email) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+          throw new BadRequestException('Invalid email format');
 
-      const existing = await credentialRepo.findOne({ where: { email } });
-      if (existing && existing.id !== id) {
-        throw new BadRequestException('Email already in use');
-      }
+        const existing = await credentialRepo.findOne({ where: { email } });
 
-      credential.email = email;
+        if (existing && existing.id !== id) {
+          throw new BadRequestException(
+            'Email already in use by another account',
+          );
+        }
+
+        credential.email = email;
+      }
     }
 
     if (password) {
-      if (password.length < 6) {
+      if (password.length < 6)
         throw new BadRequestException(
           'Password must be at least 6 characters long',
         );
-      }
-
       credential.password = await bcrypt.hash(password, 10);
     }
 
-    try {
-      return await credentialRepo.save(credential);
-    } catch (error) {
-      console.error('Error updating credential:', error);
-      throw new InternalServerErrorException('Failed to update credential');
-    }
+    return await credentialRepo.save(credential);
   }
 
   async deleteCredential(id: string): Promise<void> {

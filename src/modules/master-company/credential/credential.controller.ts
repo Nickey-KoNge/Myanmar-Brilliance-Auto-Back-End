@@ -27,7 +27,7 @@ export class CredentialsController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() body: { refresh_token: string }) {
     // Token ကို decode လုပ်ပြီး User ID ကို ရယူခြင်း (သို့မဟုတ် logic တစ်ခုခုဖြင့် ပို့ပေးရန်)
-    const decoded = this.jwtService.decode(body.refresh_token) as any;
+    const decoded = this.jwtService.decode(body.refresh_token);
     const userId = decoded.sub;
 
     // argument ၂ ခုလုံး ထည့်ပေးလိုက်ပါ

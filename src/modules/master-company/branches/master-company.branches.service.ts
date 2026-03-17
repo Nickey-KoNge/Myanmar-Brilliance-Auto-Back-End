@@ -27,33 +27,6 @@ export class MasterCompanyBranchesService {
     return await this.opService.create<Branches>(this.branchesRepository, dto);
   }
 
-  // async findAll(): Promise<Branches[]> {
-  //   return await this.branchesRepository.find({
-  //     relations: { company: true, staff: true, stations: true },
-  //     select: {
-  //       id: true,
-  //       branches_name: true,
-  //       gps_location: true,
-  //       description: true,
-  //       phone: true,
-  //       city: true,
-  //       division: true,
-  //       status: true,
-  //       company: {
-  //         id: true,
-  //         company_name: true,
-  //       },
-  //       staff: {
-  //         id: true,
-  //         staffName: true,
-  //       },
-  //       stations: {
-  //         id: true,
-  //         station_name: true,
-  //       },
-  //     },
-  //   });
-  // }
   async findAll(query: PaginateBranchesDto) {
     const {
       limit,
@@ -166,20 +139,9 @@ export class MasterCompanyBranchesService {
         description: true,
         phone: true,
         city: true,
+        address: true,
         division: true,
         status: true,
-        company: {
-          id: true,
-          company_name: true,
-        },
-        staff: {
-          id: true,
-          staffName: true,
-        },
-        stations: {
-          id: true,
-          station_name: true,
-        },
       },
     });
 
@@ -190,9 +152,11 @@ export class MasterCompanyBranchesService {
   }
 
   async update(id: string, dto: UpdateBranchesDto): Promise<Branches> {
-    await this.findOne(id);
-    await this.opService.update<Branches>(this.branchesRepository, id, dto);
-    return await this.findOne(id);
+    return await this.opService.update<Branches>(
+      this.branchesRepository,
+      id,
+      dto,
+    );
   }
 
   async remove(id: string): Promise<{ id: string }> {

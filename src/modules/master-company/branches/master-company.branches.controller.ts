@@ -7,8 +7,6 @@ import {
   Patch,
   Post,
   Param,
-  UseInterceptors,
-  ClassSerializerInterceptor,
   Query,
 } from '@nestjs/common';
 import { CreateBranchesDto } from './dtos/create-branches.dto';
@@ -17,8 +15,9 @@ import { UpdateBranchesDto } from './dtos/update-branches.dto';
 
 //extra import for serialize
 import { FindBranchesSerialize } from './serialize/find-branches.serialize';
-import { plainToInstance } from 'class-transformer';
 import { PaginateBranchesDto } from './dtos/paginate-branches.dto';
+import { GetBranchesSerialize } from './serialize/get-branches.serialize';
+import { Serialize } from 'src/common/interceptors/serialize.interceptor';
 
 @Controller('master-company/branches')
 export class MasterCompanyBranchesController {
@@ -28,20 +27,14 @@ export class MasterCompanyBranchesController {
   async create(@Body() dto: CreateBranchesDto) {
     return await this.service.create(dto);
   }
-  @UseInterceptors(ClassSerializerInterceptor)
+  @Serialize(FindBranchesSerialize)
   @Get()
   async findAll(@Query() query: PaginateBranchesDto) {
-    const result = await this.service.findAll(query);
-    const serializedData = plainToInstance(FindBranchesSerialize, result.data, {
-      excludeExtraneousValues: true,
-    });
-    return {
-      ...result,
-      data: serializedData,
-    };
+    return await this.service.findAll(query);
   }
 
   @Get(':id')
+  @Serialize(GetBranchesSerialize)
   async findOne(@Param('id') id: string) {
     return await this.service.findOne(id);
   }

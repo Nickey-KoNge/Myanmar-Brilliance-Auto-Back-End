@@ -17,6 +17,9 @@ export class FindStaffSerialize {
   position: string;
 
   @Expose()
+  email: string;
+
+  @Expose()
   image: string;
 
   // --- Company ---
@@ -38,7 +41,12 @@ export class FindStaffSerialize {
 
   @Expose()
   role_name: string;
+  // --- Credential ---
+  @Expose()
+  credential_id: string;
 
+  @Expose()
+  credential_email: string;
   // --- Full Address ---
   @Expose()
   @Transform(

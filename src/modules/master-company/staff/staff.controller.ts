@@ -8,7 +8,6 @@ import {
   Delete,
   UploadedFile,
   UseInterceptors,
-  ClassSerializerInterceptor,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -20,8 +19,9 @@ import { AtGuard } from '../../../common/guards/at.guard';
 
 //extra import for serialize
 import { FindStaffSerialize } from './serialize/find-staff.serialize';
-import { plainToInstance } from 'class-transformer';
 import { PaginateStaffDto } from './dto/paginate-staff.dto';
+import { Serialize } from 'src/common/interceptors/serialize.interceptor';
+import { GetStaffSerialize } from './serialize/get-staff.serialize';
 
 @Controller('master-company/staff')
 @UseGuards(AtGuard)
@@ -36,32 +36,28 @@ export class StaffController {
   ) {
     return this.staffService.create(createStaffDto, file);
   }
-  @UseInterceptors(ClassSerializerInterceptor)
+
   @Get()
+  @Serialize(FindStaffSerialize)
   async findAll(@Query() query: PaginateStaffDto) {
-    const result = await this.staffService.findAll(query);
-    const serializedData = plainToInstance(FindStaffSerialize, result.data, {
-      excludeExtraneousValues: true,
-    });
-    return {
-      ...result,
-      data: serializedData,
-    };
+    return await this.staffService.findAll(query);
   }
 
   @Get(':id')
+  @Serialize(GetStaffSerialize)
   findOne(@Param('id') id: string) {
     return this.staffService.findOne(id);
   }
 
   @Patch(':id')
   @UseInterceptors(FileInterceptor('image'))
-  update(
+  @Serialize(GetStaffSerialize)
+  async update(
     @Param('id') id: string,
     @Body() updateStaffDto: UpdateStaffDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.staffService.update(id, updateStaffDto, file);
+    return await this.staffService.update(id, updateStaffDto, file);
   }
 
   @Delete(':id')
