@@ -216,7 +216,7 @@ export class CredentialsService {
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(
         { sub: userId, email, companyId },
-        { secret: 'AT_SECRET', expiresIn: '10m' }, // Use env variables in production
+        { secret: 'AT_SECRET', expiresIn: '4h' }, // Use env variables in production
       ),
       this.jwtService.signAsync(
         { sub: userId, email, companyId },
