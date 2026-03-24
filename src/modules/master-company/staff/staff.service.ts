@@ -134,7 +134,7 @@ export class StaffService {
           OR staff.city ILike :search
           OR staff.country ILike :search
            OR staff.nrc ILike :search
-          OR staff.dob ILike :search)`,
+          OR CAST(staff.dob AS TEXT) ILike :search)`,
         { search: `%${search}%` },
       );
     }
