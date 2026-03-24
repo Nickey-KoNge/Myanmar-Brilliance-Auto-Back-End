@@ -245,6 +245,18 @@ export class StaffService {
           id: true,
           email: true,
         },
+        company: {
+          id: true,
+          company_name: true,
+        },
+        branch: {
+          id: true,
+          branches_name: true,
+        },
+        role: {
+          id: true,
+          role_name: true,
+        },
       },
     });
 

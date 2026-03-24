@@ -27,6 +27,44 @@ export class GetStaffSerialize {
     return staff.credential?.id || null;
   })
   credential_id: string;
+  // --- Role ---
+  @Expose()
+  @Transform(({ obj }: { obj: { role?: { id: string } } }) => {
+    return obj.role?.id || null;
+  })
+  role_id: string;
+
+  @Expose()
+  @Transform(({ obj }: { obj: { role?: { role_name: string } } }) => {
+    return obj.role?.role_name || null;
+  })
+  role_name: string;
+
+  // --- Company ---
+  @Expose()
+  @Transform(({ obj }: { obj: { company?: { id: string } } }) => {
+    return obj.company?.id || null;
+  })
+  company_id: string;
+
+  @Expose()
+  @Transform(({ obj }: { obj: { company?: { company_name: string } } }) => {
+    return obj.company?.company_name || null;
+  })
+  company_name: string;
+
+  // --- Branch ---
+  @Expose()
+  @Transform(({ obj }: { obj: { branch?: { id: string } } }) => {
+    return obj.branch?.id || null;
+  })
+  branch_id: string;
+
+  @Expose()
+  @Transform(({ obj }: { obj: { branch?: { branches_name: string } } }) => {
+    return obj.branch?.branches_name || null;
+  })
+  branch_name: string;
 
   @Expose()
   street_address: string;
