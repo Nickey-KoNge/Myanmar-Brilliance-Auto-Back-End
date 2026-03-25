@@ -29,6 +29,9 @@ export class FindCompanySerialize {
   image: string;
 
   @Expose()
+  status: string;
+
+  @Expose()
   @Transform(
     ({
       obj,

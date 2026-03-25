@@ -142,6 +142,7 @@ export class CompanyService {
       image: company.image,
       email: company.email,
       country: company.country,
+      status: company.status,
     }));
 
     const hasFilters = !!(search || startDate || endDate);

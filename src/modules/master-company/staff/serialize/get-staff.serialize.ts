@@ -22,6 +22,9 @@ export class GetStaffSerialize {
   email: string;
 
   @Expose()
+  status: string;
+
+  @Expose()
   @Transform(({ obj }: { obj: any }) => {
     const staff = obj as { credential?: { id: string } };
     return staff.credential?.id || null;

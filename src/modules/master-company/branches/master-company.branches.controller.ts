@@ -8,6 +8,7 @@ import {
   Post,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateBranchesDto } from './dtos/create-branches.dto';
 import { MasterCompanyBranchesService } from './master-company.branches.service';
@@ -18,8 +19,10 @@ import { FindBranchesSerialize } from './serialize/find-branches.serialize';
 import { PaginateBranchesDto } from './dtos/paginate-branches.dto';
 import { GetBranchesSerialize } from './serialize/get-branches.serialize';
 import { Serialize } from 'src/common/interceptors/serialize.interceptor';
+import { AtGuard } from 'src/common/guards/at.guard';
 
 @Controller('master-company/branches')
+@UseGuards(AtGuard)
 export class MasterCompanyBranchesController {
   constructor(private readonly service: MasterCompanyBranchesService) {}
 
