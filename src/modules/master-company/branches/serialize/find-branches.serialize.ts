@@ -23,6 +23,9 @@ export class FindBranchesSerialize {
   description: string;
 
   @Expose()
+  status: string;
+
+  @Expose()
   @Transform(
     ({
       obj,
@@ -36,7 +39,7 @@ export class FindBranchesSerialize {
       const combined = `${addr} ${city} ${div}`.trim();
       return combined === '' ? null : combined;
     },
-    { toClassOnly: true },
+    // { toClassOnly: true },
   )
   fullAddress: string;
 }
