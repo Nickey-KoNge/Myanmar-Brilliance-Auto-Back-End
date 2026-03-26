@@ -38,6 +38,9 @@ export class GetCompanySerialize {
   street_address: string;
 
   @Expose()
+  status: string;
+
+  @Expose()
   website_url: string;
 
   @Expose()

@@ -176,7 +176,7 @@ export class StaffService {
       city: staff.city,
       country: staff.country,
       email: staff.credential?.email || null,
-
+      status: staff.status,
       company_id: staff.company?.id || null,
       company_name: staff.company?.company_name || null,
 

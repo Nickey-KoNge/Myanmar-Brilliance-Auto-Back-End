@@ -22,6 +22,9 @@ export class FindStaffSerialize {
   @Expose()
   image: string;
 
+  @Expose()
+  status: string;
+
   // --- Company ---
   @Expose()
   company_id: string;

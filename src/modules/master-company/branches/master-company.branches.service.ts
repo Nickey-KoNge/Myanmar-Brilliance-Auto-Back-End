@@ -40,7 +40,9 @@ export class MasterCompanyBranchesService {
     } = query;
 
     const queryBuilder = this.branchesRepository.createQueryBuilder('branches');
+
     queryBuilder.leftJoinAndSelect('branches.company', 'company');
+
     if (companyId) {
       queryBuilder.andWhere('branches.company = :companyId', { companyId });
     }
@@ -83,6 +85,7 @@ export class MasterCompanyBranchesService {
       .addOrderBy('branches.id', 'DESC')
       .take(limit)
       .getMany();
+
     const data = rawData.map((branch) => ({
       id: branch.id,
       branches_name: branch.branches_name,
@@ -94,7 +97,9 @@ export class MasterCompanyBranchesService {
       address: branch.address,
       company_id: branch.company?.id || null,
       company_name: branch.company?.company_name || null,
+      status: branch.status,
     }));
+
     const hasFilters = !!(search || startDate || endDate || companyId);
     const total = await this.getOptimizedCount(queryBuilder, hasFilters);
 
@@ -142,7 +147,7 @@ export class MasterCompanyBranchesService {
         address: true,
         division: true,
         status: true,
-        company_id: true,
+        company: { id: true },
       },
     });
 
