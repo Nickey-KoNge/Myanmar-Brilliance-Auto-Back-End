@@ -39,6 +39,10 @@ export class Stations {
   @Column({ type: 'varchar', length: 100 })
   address: string;
 
+  @Column({ nullable: true, length: 20 })
+  @Index()
+  phone: string;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   @Index()
   description: string;

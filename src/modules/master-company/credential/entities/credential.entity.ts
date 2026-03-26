@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Staff } from '../../staff/entities/staff.entity';
 import { RefreshToken } from './refresh-token.entity';
+import { Driver } from '../../driver/entities/driver.entity';
 
 @Entity({ name: 'credentials', schema: 'master_company' })
 @Index(['email', 'status'])
@@ -36,6 +37,9 @@ export class Credential {
 
   @OneToOne(() => Staff, (staff) => staff.credential)
   staff: Staff;
+
+  @OneToOne(() => Driver, (driver) => driver.credential_id)
+  driver: Driver;
 
   @OneToMany(() => RefreshToken, (token) => token.credential)
   refreshTokens: RefreshToken[];
