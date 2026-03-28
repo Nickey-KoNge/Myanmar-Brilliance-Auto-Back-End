@@ -25,33 +25,6 @@ export class CredentialsService {
     dto: RegisterDto,
     manager?: EntityManager,
   ): Promise<Credential> {
-    // 1. Hash the password before saving
-    // const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    // 2. Use a transaction to create both records
-    // return await this.dataSource.transaction(async (manager) => {
-    //   try {
-    //     // Create the Login Identity
-    //     const credential = await manager.save(Credential, {
-    //       email: dto.email,
-    //       password: hashedPassword,
-    //     });
-
-    //     // Create the Staff Profile linked to the Credential and Company
-    //     await manager.save(Staff, {
-    //       staffName: dto.staffName,
-    //       phone: dto.phone,
-    //       credential: { id: credential.id },
-    //       company: { id: dto.companyId },
-    //     });
-
-    //     return { message: 'Registration successful' };
-    //   } catch (error) {
-    //     if (error.code === '23505') throw new ConflictException('Email already exists');
-    //     throw error;
-    //   }
-    // });
-
     const credentialRepo = manager
       ? manager.getRepository(Credential)
       : this.dataSource.getRepository(Credential);
@@ -87,53 +60,6 @@ export class CredentialsService {
       throw new InternalServerErrorException('Failed to create credential');
     }
   }
-
-  // async updateCredential(
-  //   id: string,
-  //   email?: string,
-  //   password?: string,
-  // ): Promise<Credential> {
-  //   const credentialRepo = this.dataSource.getRepository(Credential);
-
-  //   const credential = await credentialRepo.findOne({ where: { id } });
-  //   if (!credential) {
-  //     throw new NotFoundException('Credential not found');
-  //   }
-
-  //   if (email) {
-  //     if (email !== credential.email) {
-  //       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-  //         throw new BadRequestException('Invalid email format');
-  //       }
-
-  //       const existing = await credentialRepo.findOne({ where: { email } });
-  //       if (existing) {
-  //         throw new BadRequestException(
-  //           'Email already in use by another account',
-  //         );
-  //       }
-
-  //       credential.email = email;
-  //     }
-  //   }
-
-  //   if (password) {
-  //     if (password.length < 6) {
-  //       throw new BadRequestException(
-  //         'Password must be at least 6 characters long',
-  //       );
-  //     }
-
-  //     credential.password = await bcrypt.hash(password, 10);
-  //   }
-
-  //   try {
-  //     return await credentialRepo.save(credential);
-  //   } catch (error) {
-  //     console.error('Error updating credential:', error);
-  //     throw new InternalServerErrorException('Failed to update credential');
-  //   }
-  // }
 
   async updateCredential(
     id: string,
@@ -209,6 +135,13 @@ export class CredentialsService {
     return {
       message: 'Login successful',
       ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        staffName: user.staff?.staffName || 'Unknown User',
+        image: user.staff?.image || null,
+        companyId: user.staff?.company?.id,
+      },
     };
   }
 

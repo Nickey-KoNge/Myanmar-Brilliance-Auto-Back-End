@@ -1,4 +1,5 @@
 // src/common/service/local-file.service.ts
+// src/common/service/local-file.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
@@ -11,31 +12,27 @@ export class LocalFileService implements IFileService {
   private readonly logger = new Logger(LocalFileService.name);
 
   private readonly uploadPath = path.join(process.cwd(), 'public', 'uploads');
-  private readonly appUrl: string;
 
-  constructor(private readonly configService: ConfigService) {
-    this.appUrl = this.configService.get<string>(
-      'APP_URL',
-      'http://localhost:3000',
-    );
+  constructor(private readonly configService: ConfigService) {}
+
+  private get appUrl(): string {
+    return this.configService.get<string>('APP_URL', 'http://localhost:3001');
   }
-  // upload image file
+
+  // Upload image file
   async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
     try {
       const fileExtension = path.extname(file.originalname);
       const fileName = `${generateUuidV7()}${fileExtension}`;
 
-      // create directory -> public/uploads/company
       const targetDirectory = path.join(this.uploadPath, folder);
       const fullFilePath = path.join(targetDirectory, fileName);
 
-      // create Folder
       await fs.mkdir(targetDirectory, { recursive: true });
 
       // save file
       await fs.writeFile(fullFilePath, file.buffer);
 
-      //  http://localhost:3000/uploads/company/uuid-123.jpg
       return `${this.appUrl}/uploads/${folder}/${fileName}`;
     } catch (error) {
       const errorMessage =
@@ -44,12 +41,12 @@ export class LocalFileService implements IFileService {
       throw new Error('Local file upload failed');
     }
   }
-  //   delete image file
+
+  // Delete image file
   async deleteFile(imageUrl: string): Promise<void> {
     if (!imageUrl) return;
 
     try {
-      //  http://localhost:3000/uploads/company/123.jpg -> company/123.jpg
       const urlObj = new URL(imageUrl);
       const filePathInsideUploads = urlObj.pathname.replace('/uploads/', '');
       const fullFilePath = path.join(this.uploadPath, filePathInsideUploads);
