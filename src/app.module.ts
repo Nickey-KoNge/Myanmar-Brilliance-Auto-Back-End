@@ -1,4 +1,3 @@
-// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -13,6 +12,7 @@ import { CompanyModule } from './modules/master-company/company/company.module';
 import { CredentialModule } from './modules/master-company/credential/credential.module';
 import { StaffModule } from './modules/master-company/staff/staff.module';
 import { MasterServiceRoleModule } from './modules/master-service/role/master-service.role.module';
+import { DriverModule } from './modules/master-company/driver/driver.module';
 
 @Module({
   imports: [
@@ -36,6 +36,9 @@ import { MasterServiceRoleModule } from './modules/master-service/role/master-se
     CredentialModule,
     CommonModule,
     MasterServiceRoleModule,
+    DriverModule,
   ],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}
