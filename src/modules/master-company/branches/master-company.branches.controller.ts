@@ -22,7 +22,7 @@ import { Serialize } from 'src/common/interceptors/serialize.interceptor';
 import { AtGuard } from 'src/common/guards/at.guard';
 
 @Controller('master-company/branches')
-@UseGuards(AtGuard)
+// @UseGuards(AtGuard)
 export class MasterCompanyBranchesController {
   constructor(private readonly service: MasterCompanyBranchesService) {}
 

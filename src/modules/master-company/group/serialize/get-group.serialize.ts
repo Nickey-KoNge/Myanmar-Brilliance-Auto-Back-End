@@ -4,6 +4,8 @@ export class GetStationsSerialize {
   @Expose()
   id: string;
 
+  
+
   @Expose()
   status: string;
 }

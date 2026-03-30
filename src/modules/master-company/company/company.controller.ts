@@ -25,7 +25,7 @@ import { Serialize } from 'src/common/interceptors/serialize.interceptor';
 import { GetCompanySerialize } from './serialize/get-company.serialize';
 
 @Controller('master-company/company')
-@UseGuards(AtGuard)
+//@UseGuards(AtGuard)
 export class CompanyController {
   constructor(private readonly companyService: CompanyService) {}
   // @UseInterceptors(ClassSerializerInterceptor)

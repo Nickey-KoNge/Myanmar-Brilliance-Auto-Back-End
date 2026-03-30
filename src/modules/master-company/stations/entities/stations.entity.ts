@@ -52,10 +52,10 @@ export class Stations {
   status: string;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  created_at: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updated_at: Date;
 
   @ManyToOne(() => Branches, (branch) => branch.stations, {
     onDelete: 'CASCADE',

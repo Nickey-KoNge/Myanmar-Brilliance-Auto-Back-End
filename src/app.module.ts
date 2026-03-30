@@ -12,6 +12,7 @@ import { CompanyModule } from './modules/master-company/company/company.module';
 import { CredentialModule } from './modules/master-company/credential/credential.module';
 import { StaffModule } from './modules/master-company/staff/staff.module';
 import { MasterServiceRoleModule } from './modules/master-service/role/master-service.role.module';
+import { MasterCompanyStationsModule } from './modules/master-company/stations/master-company.stations.module';
 import { DriverModule } from './modules/master-company/driver/driver.module';
 
 @Module({
@@ -31,6 +32,7 @@ import { DriverModule } from './modules/master-company/driver/driver.module';
     }),
 
     MasterCompanyBranchesModule,
+    MasterCompanyStationsModule,
     CompanyModule,
     StaffModule,
     CredentialModule,
