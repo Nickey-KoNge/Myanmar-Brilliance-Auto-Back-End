@@ -28,9 +28,9 @@ export class Driver {
   @Index()
   credential_id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   @Index()
-  station_id: string;
+  station_id: string | null;
 
   @Column({ type: 'varchar', length: 50, unique: true })
   @Index()
@@ -77,7 +77,7 @@ export class Driver {
   driving_exp: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  image: string;
+  image: string | null;
 
   @Column({ default: 'Active', length: 20 })
   @Index()

@@ -89,12 +89,10 @@ export class CompanyService {
           OR company.street_address ILike :search
           OR company.city ILike :search
           OR company.country ILike :search
-          OR staff.owner_name ILike :search
-          OR staff.owner_email ILike :search
-          OR staff.owner_phone ILike :search
-          OR staff.establish_year ILike :search
-          OR staff.reg_exp_date ILike :search
-          OR staff.email ILike :search)`,
+          OR company.owner_name ILike :search
+          OR company.owner_email ILike :search
+          OR company.owner_phone ILike :search
+          OR company.email ILike :search)`,
         { search: `%${search}%` },
       );
     }
@@ -198,6 +196,7 @@ export class CompanyService {
         reg_exp_date: true,
         image: true,
         email: true,
+        status: true,
         branches: {
           id: true,
           branches_name: true,
