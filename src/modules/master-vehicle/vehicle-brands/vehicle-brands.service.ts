@@ -13,6 +13,7 @@ import { IFileService } from 'src/common/service/i-file.service';
 import { OpService } from 'src/common/service/op.service';
 import { OptimizeImageService } from 'src/common/service/optimize-image.service';
 import { UpdateVehicleBrandsDto } from './dtos/update-vehicle-brands.dto';
+import { PaginateVehicleBrandDto } from './dtos/paginate-vehicle-brands.dto';
 
 @Injectable()
 export class VehicleBrandsService {
@@ -67,7 +68,53 @@ export class VehicleBrandsService {
     return await this.vehicleBrandsRepo.save(newBrand);
   }
 
-  async findAll(): Promise<VehicleBrands[]> {
+  async findAll(query: PaginateVehicleBrandDto) {
+    const {
+      page,
+      limit,
+      search,
+      lastId,
+      lastCreatedAt,
+      vehicle_brand_id: id,
+      country_of_origin,
+      manufacturer,
+      startDate,
+      endDate,
+    } = query;
+
+    const queryBuilder =
+      this.vehicleBrandsRepo.createQueryBuilder('vehicle-brands');
+
+    if (search) {
+      queryBuilder.andWhere(
+        `(vehicle_brands.vehicle_brand_name ILike :search 
+          OR vehicle_brands.country_of_origin ILike :search 
+          OR vehicle_brands.manufacturer ILike :search)`,
+        { search: `%${search}%` },
+      );
+    }
+
+    if (startDate || endDate) {
+      if (startDate)
+        queryBuilder.andWhere('staff.createdAt >= :startDate', {
+          startDate: `${startDate} 00:00:00`,
+        });
+      if (endDate)
+        queryBuilder.andWhere('staff.createdAt <= :endDate', {
+          endDate: `${endDate} 23:59:59`,
+        });
+    }
+
+    if (lastId && lastCreatedAt && lastId !== 'undefined') {
+      queryBuilder.andWhere(
+        '(vehicle_brands.createdAt < :lastCreatedAt OR (vehicle_brands.createdAt = :lastCreatedAt AND vehicle_brands.id < :lastId))',
+        { lastCreatedAt, lastId },
+      );
+    } else {
+      const skip = (page - 1) * limit;
+      queryBuilder.skip(skip);
+    }
+
     return await this.vehicleBrandsRepo.find();
   }
 
