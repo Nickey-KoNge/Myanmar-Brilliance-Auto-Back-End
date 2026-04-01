@@ -14,8 +14,8 @@ export class CreateVehicleBrandsDto {
   @IsNotEmpty()
   manufacturer: string;
 
-  // @IsNotEmpty()
-  // image: any;
+  @IsOptional()
+  image?: any;
 
   @IsString()
   @IsNotEmpty()
