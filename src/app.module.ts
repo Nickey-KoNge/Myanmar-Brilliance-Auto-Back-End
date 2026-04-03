@@ -14,6 +14,7 @@ import { StaffModule } from './modules/master-company/staff/staff.module';
 import { MasterServiceRoleModule } from './modules/master-service/role/master-service.role.module';
 import { MasterCompanyStationsModule } from './modules/master-company/stations/master-company.stations.module';
 import { DriverModule } from './modules/master-company/driver/driver.module';
+import { VehicleBrandsModule } from './modules/master-vehicle/vehicle-brands/vehicle-brands.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { DriverModule } from './modules/master-company/driver/driver.module';
     CommonModule,
     MasterServiceRoleModule,
     DriverModule,
+    VehicleBrandsModule,
   ],
   controllers: [],
   providers: [],

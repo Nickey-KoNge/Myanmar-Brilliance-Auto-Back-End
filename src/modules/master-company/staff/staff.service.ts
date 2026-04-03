@@ -85,6 +85,7 @@ export class StaffService {
       await queryRunner.release();
     }
   }
+
   async findAll(query: PaginateStaffDto) {
     const {
       page,
@@ -197,6 +198,7 @@ export class StaffService {
       currentPage: page,
     };
   }
+
   private async getOptimizedCount(
     queryBuilder: SelectQueryBuilder<Staff>,
     hasFilters: boolean,
