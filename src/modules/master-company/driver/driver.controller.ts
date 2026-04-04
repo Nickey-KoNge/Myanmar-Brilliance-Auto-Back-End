@@ -48,6 +48,11 @@ export class DriverController {
     });
   }
 
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return await this.driverService.findOne(id);
+  }
+
   @Post('register')
   @Serialize(DriverResponseDto)
   @UseInterceptors(FileInterceptor('image'))
