@@ -16,10 +16,24 @@ export class DriverService {
   ) {}
 
   async findAll(query: any) {
-    const { search, fromDate, toDate, page, limit } = query;
+    const { search, fromDate, toDate, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.repo.createQueryBuilder('driver');
+
+    queryBuilder.select([
+      'driver.id',
+      'driver.driver_name',
+      'driver.nrc',
+      'driver.phone',
+      'driver.license_no',
+      'driver.address', 
+      'driver.city',
+      'driver.image',
+      'driver.dob', 
+      'driver.status',
+      'driver.createdAt',
+    ]);
 
     if (search) {
       queryBuilder.andWhere(
@@ -30,25 +44,50 @@ export class DriverService {
 
     if (fromDate && toDate) {
       queryBuilder.andWhere('driver.createdAt BETWEEN :fromDate AND :toDate', {
-        fromDate,
-        toDate,
+        fromDate: `${fromDate} 00:00:00`, 
+        toDate: `${toDate} 23:59:59`,
       });
     }
 
     queryBuilder.skip(skip).take(limit).orderBy('driver.createdAt', 'DESC');
 
     const [items, total] = await queryBuilder.getManyAndCount();
+    const activeCount = await this.repo.count({ where: { status: 'Active' } });
+    const inactiveCount = await this.repo.count({
+      where: { status: 'Inactive' },
+    });
+
+    const stations = await this.repo.manager.query(
+      `SELECT id, station_name as name FROM "master_company"."stations" ORDER BY station_name ASC`,
+    );
+
+    console.log(stations);
 
     return {
       items,
+      stations,
       meta: {
         totalItems: total,
         itemCount: items.length,
-        itemsPerPage: limit,
+        itemsPerPage: Number(limit),
         totalPages: Math.ceil(total / limit),
-        currentPage: page,
+        currentPage: Number(page),
+        activeItems: activeCount,
+        inactiveItems: inactiveCount,
       },
     };
+  }
+
+  async findOne(id: string) {
+    const driver = await this.repo.findOne({
+      where: { id },
+    });
+
+    if (!driver) {
+      throw new NotFoundException(`Driver with ID ${id} not found`);
+    }
+
+    return driver;
   }
 
   async createDriver(dto: CreateDriverDto, file?: Express.Multer.File) {
@@ -71,7 +110,7 @@ export class DriverService {
       throw new NotFoundException(`Driver with ID ${id} not found`);
     }
 
-    let imageUrl = driver.image; // Keep old image by default
+    let imageUrl = driver.image; 
     if (file) {
       imageUrl = await this.fileService.uploadFile(file, 'drivers');
     }
