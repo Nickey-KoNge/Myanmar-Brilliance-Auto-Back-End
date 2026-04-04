@@ -15,6 +15,8 @@ import { IFileService } from '../../../common/service/i-file.service';
 import { OpService } from '../../../common/service/op.service';
 import { OptimizeImageService } from '../../../common/service/optimize-image.service';
 import { PaginateCompanyDto } from './dtos/paginate-company.dto';
+import { MasterAuditService } from 'src/modules/master-audit/audit/audit.service';
+
 @Injectable()
 export class CompanyService {
   constructor(
@@ -25,7 +27,25 @@ export class CompanyService {
     private readonly fileService: IFileService,
     private readonly opService: OpService,
     private readonly optimizeImageService: OptimizeImageService,
+    private readonly auditService: MasterAuditService,
   ) {}
+
+  private getChanges(
+    oldObj: Record<string, unknown>,
+    newObj: Record<string, unknown>,
+  ): { oldVals: Record<string, unknown>; newVals: Record<string, unknown> } {
+    const oldVals: Record<string, unknown> = {};
+    const newVals: Record<string, unknown> = {};
+
+    Object.keys(newObj).forEach((key) => {
+      if (oldObj[key] !== newObj[key] && newObj[key] !== undefined) {
+        oldVals[key] = oldObj[key];
+        newVals[key] = newObj[key];
+      }
+    });
+
+    return { oldVals, newVals };
+  }
 
   async findActive(limit: number = 100): Promise<Company[]> {
     return await this.companyRepo.find({
@@ -44,6 +64,7 @@ export class CompanyService {
 
   async create(
     createCompanyDto: CreateCompanyDto,
+    userId: string,
     file: Express.Multer.File,
   ): Promise<Company> {
     if (!file) throw new Error('No file uploaded');
@@ -66,10 +87,23 @@ export class CompanyService {
       'company',
     );
     try {
-      return await this.opService.create<Company>(this.companyRepo, {
-        ...createCompanyDto,
-        image: imageUrl,
-      });
+      const newCompany = await this.opService.create<Company>(
+        this.companyRepo,
+        {
+          ...createCompanyDto,
+          image: imageUrl,
+        },
+      );
+
+      await this.auditService.logAction(
+        'company',
+        newCompany.id,
+        'CREATE',
+        null,
+        { ...createCompanyDto },
+        userId,
+      );
+      return newCompany;
     } catch (error) {
       throw new BadRequestException(
         `Registration not Success! ${error}, Re-check Company Registration Information.`,
@@ -211,8 +245,10 @@ export class CompanyService {
   async update(
     id: string,
     updateCompanyDto: UpdateCompanyDto,
+    userId: string,
     file?: Express.Multer.File,
   ): Promise<Company> {
+    const oldCompany = await this.findOne(id);
     const dto = { ...updateCompanyDto };
 
     if (Object.keys(dto).length === 0 && !file) {
@@ -232,14 +268,113 @@ export class CompanyService {
       dto.image = await this.fileService.uploadFile(optimizedFile, 'company');
     }
 
-    return await this.opService.update<Company>(this.companyRepo, id, dto);
+    const updatedCompany = await this.opService.update<Company>(
+      this.companyRepo,
+      id,
+      dto,
+    );
+    const { oldVals, newVals } = this.getChanges(
+      oldCompany as unknown as Record<string, unknown>,
+      dto as unknown as Record<string, unknown>,
+    );
+
+    if (Object.keys(newVals).length > 0) {
+      await this.auditService.logAction(
+        'company',
+        id,
+        'UPDATE',
+        oldVals,
+        newVals,
+        userId,
+      );
+    }
+
+    return updatedCompany;
   }
 
-  async remove(id: string): Promise<Company> {
+  async remove(id: string, userId: string): Promise<{ id: string }> {
     const existingCompany = await this.findOne(id);
     if (existingCompany?.image) {
       await this.fileService.deleteFile(existingCompany.image);
     }
-    return await this.opService.remove<Company>(this.companyRepo, id);
+    try {
+      await this.opService.remove<Company>(this.companyRepo, id);
+
+      await this.auditService.logAction(
+        'company',
+        id,
+        'DELETE',
+        { ...existingCompany },
+        null,
+        userId,
+      );
+
+      return { id };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as Record<string, unknown>).code === '23503'
+      ) {
+        throw new BadRequestException(
+          'Cannot delete this company because it contains active staff or stations. Please remove or reassign them first.',
+        );
+      }
+      throw error;
+    }
+
+    // return await this.opService.remove<Company>(this.companyRepo, id);
+  }
+  async restoreCompany(auditId: string, userId: string): Promise<Company> {
+    // ၁။ Audit record ကို ရှာပါ
+    const auditRecord = await this.auditService.findOne(auditId);
+
+    if (auditRecord.entity_name !== 'company') {
+      throw new BadRequestException('This audit record is not for company');
+    }
+
+    const dataToRestore = auditRecord.old_values;
+
+    if (!dataToRestore) {
+      throw new BadRequestException(
+        'No old data available to restore from this action',
+      );
+    }
+
+    // ၃။ Database ထဲတွင် ရှိမရှိ စစ်ဆေးပါ
+    const existingCompany = await this.companyRepo.findOne({
+      where: { id: auditRecord.entity_id },
+      withDeleted: true,
+    });
+
+    if (existingCompany) {
+      Object.assign(existingCompany, dataToRestore);
+      const restored = await this.companyRepo.save(existingCompany);
+
+      // Audit ပြန်မှတ်မည်
+      await this.auditService.logAction(
+        'company',
+        restored.id,
+        'RESTORE',
+        null,
+        null,
+        userId,
+      );
+      return restored;
+    } else {
+      const newCompany = this.companyRepo.create(dataToRestore);
+      const restored = await this.companyRepo.save(newCompany);
+
+      await this.auditService.logAction(
+        'company',
+        restored.id,
+        'RESTORE',
+        null,
+        null,
+        userId,
+      );
+      return restored;
+    }
   }
 }

@@ -13,6 +13,7 @@ import { CreateBranchesDto } from './dtos/create-branches.dto';
 import { UpdateBranchesDto } from './dtos/update-branches.dto';
 import { OpService } from '../../../common/service/op.service';
 import { PaginateBranchesDto } from './dtos/paginate-branches.dto';
+import { MasterAuditService } from 'src/modules/master-audit/audit/audit.service';
 
 @Injectable()
 export class MasterCompanyBranchesService {
@@ -21,10 +22,42 @@ export class MasterCompanyBranchesService {
 
     @InjectRepository(Branches)
     private readonly branchesRepository: Repository<Branches>,
+    private readonly auditService: MasterAuditService,
   ) {}
+  private getChanges(
+    oldObj: Record<string, unknown>,
+    newObj: Record<string, unknown>,
+  ): { oldVals: Record<string, unknown>; newVals: Record<string, unknown> } {
+    const oldVals: Record<string, unknown> = {};
+    const newVals: Record<string, unknown> = {};
 
-  async create(dto: CreateBranchesDto): Promise<Branches> {
-    return await this.opService.create<Branches>(this.branchesRepository, dto);
+    Object.keys(newObj).forEach((key) => {
+      if (oldObj[key] !== newObj[key] && newObj[key] !== undefined) {
+        oldVals[key] = oldObj[key];
+        newVals[key] = newObj[key];
+      }
+    });
+
+    return { oldVals, newVals };
+  }
+
+  async create(dto: CreateBranchesDto, userId: string): Promise<Branches> {
+    // return await this.opService.create<Branches>(this.branchesRepository, dto);
+    const newBranch = await this.opService.create<Branches>(
+      this.branchesRepository,
+      dto,
+    );
+
+    await this.auditService.logAction(
+      'branches',
+      newBranch.id,
+      'CREATE',
+      null,
+      { ...dto },
+      userId,
+    );
+
+    return newBranch;
   }
 
   async findAll(query: PaginateBranchesDto) {
@@ -124,7 +157,7 @@ export class MasterCompanyBranchesService {
       >(
         `SELECT reltuples::bigint AS estimate FROM pg_class c 
          JOIN pg_namespace n ON n.oid = c.relnamespace 
-         WHERE n.nspname = 'master_company' AND c.relname = 'branches'`, // Schema name ကို သတိထားပါ
+         WHERE n.nspname = 'master_company' AND c.relname = 'branches'`,
       );
 
       const estimate = result?.[0]?.estimate ? Number(result[0].estimate) : 0;
@@ -157,19 +190,50 @@ export class MasterCompanyBranchesService {
     return branch;
   }
 
-  async update(id: string, dto: UpdateBranchesDto): Promise<Branches> {
-    return await this.opService.update<Branches>(
+  async update(
+    id: string,
+    dto: UpdateBranchesDto,
+    userId: string,
+  ): Promise<Branches> {
+    const oldBranch = await this.findOne(id);
+    const updatedBranch = await this.opService.update<Branches>(
       this.branchesRepository,
       id,
       dto,
     );
-  }
 
-  async remove(id: string): Promise<{ id: string }> {
-    await this.findOne(id);
+    const { oldVals, newVals } = this.getChanges(
+      oldBranch as unknown as Record<string, unknown>,
+      dto as unknown as Record<string, unknown>,
+    );
+
+    if (Object.keys(newVals).length > 0) {
+      await this.auditService.logAction(
+        'branches',
+        id,
+        'UPDATE',
+        oldVals,
+        newVals,
+        userId,
+      );
+    }
+
+    return updatedBranch;
+  }
+  async remove(id: string, userId: string): Promise<{ id: string }> {
+    const branchToDelete = await this.findOne(id);
 
     try {
       await this.opService.remove<Branches>(this.branchesRepository, id);
+
+      await this.auditService.logAction(
+        'branches',
+        id,
+        'DELETE',
+        { ...branchToDelete },
+        null,
+        userId,
+      );
 
       return { id };
     } catch (error: unknown) {
@@ -183,8 +247,58 @@ export class MasterCompanyBranchesService {
           'Cannot delete this branch because it contains active staff or stations. Please remove or reassign them first.',
         );
       }
-
       throw error;
+    }
+  }
+  async restoreBranch(auditId: string, userId: string): Promise<Branches> {
+    // ၁။ Audit record ကို ရှာပါ
+    const auditRecord = await this.auditService.findOne(auditId);
+
+    if (auditRecord.entity_name !== 'branches') {
+      throw new BadRequestException('This audit record is not for branches');
+    }
+
+    const dataToRestore = auditRecord.old_values;
+
+    if (!dataToRestore) {
+      throw new BadRequestException(
+        'No old data available to restore from this action',
+      );
+    }
+
+    // ၃။ Database ထဲတွင် ရှိမရှိ စစ်ဆေးပါ
+    const existingBranch = await this.branchesRepository.findOne({
+      where: { id: auditRecord.entity_id },
+      withDeleted: true,
+    });
+
+    if (existingBranch) {
+      Object.assign(existingBranch, dataToRestore);
+      const restored = await this.branchesRepository.save(existingBranch);
+
+      // Audit ပြန်မှတ်မည်
+      await this.auditService.logAction(
+        'branches',
+        restored.id,
+        'RESTORE',
+        null,
+        null,
+        userId,
+      );
+      return restored;
+    } else {
+      const newBranch = this.branchesRepository.create(dataToRestore);
+      const restored = await this.branchesRepository.save(newBranch);
+
+      await this.auditService.logAction(
+        'branches',
+        restored.id,
+        'RESTORE',
+        null,
+        null,
+        userId,
+      );
+      return restored;
     }
   }
 }

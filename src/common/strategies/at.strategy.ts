@@ -6,6 +6,7 @@ type JwtPayload = {
   sub: string;
   email: string;
   companyId: string;
+  staffName: string;
 };
 @Injectable()
 export class AtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -23,6 +24,7 @@ export class AtStrategy extends PassportStrategy(Strategy, 'jwt') {
       userId: payload.sub,
       email: payload.email,
       companyId: payload.companyId,
+      staffName: payload.staffName,
     };
   }
 }
