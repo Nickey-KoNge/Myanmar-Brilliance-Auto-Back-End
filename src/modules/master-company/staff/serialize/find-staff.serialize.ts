@@ -2,54 +2,54 @@ import { Expose, Transform } from 'class-transformer';
 
 export class FindStaffSerialize {
   @Expose()
-  id: string;
+  id!: string;
 
   @Expose()
-  staffName: string;
+  staffName!: string;
 
   @Expose()
-  phone: string;
+  phone!: string;
 
   @Expose()
-  nrc: string;
+  nrc!: string;
 
   @Expose()
-  position: string;
+  position!: string;
 
   @Expose()
-  email: string;
+  email!: string;
 
   @Expose()
-  image: string;
+  image!: string;
 
   @Expose()
-  status: string;
+  status!: string;
 
   // --- Company ---
   @Expose()
-  company_id: string;
+  company_id!: string;
 
   @Expose()
-  company_name: string;
+  company_name!: string;
 
   // --- Branch ---
   @Expose()
-  branches_id: string;
+  branches_id!: string;
 
   @Expose()
-  branches_name: string;
+  branches_name!: string;
   // --- Role ---
   @Expose()
-  role_id: string;
+  role_id!: string;
 
   @Expose()
-  role_name: string;
+  role_name!: string;
   // --- Credential ---
   @Expose()
-  credential_id: string;
+  credential_id!: string;
 
   @Expose()
-  credential_email: string;
+  credential_email!: string;
   // --- Full Address ---
   @Expose()
   @Transform(
@@ -67,5 +67,5 @@ export class FindStaffSerialize {
     },
     { toClassOnly: true },
   )
-  fullAddress: string;
+  fullAddress!: string;
 }

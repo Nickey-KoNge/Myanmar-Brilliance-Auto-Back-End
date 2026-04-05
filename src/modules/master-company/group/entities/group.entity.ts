@@ -8,44 +8,48 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { Stations } from '../../stations/entities/stations.entity';
-
+import { Vehicle } from '../../../master-vehicle/vehicle/entities/vehicle.entity';
 @Entity({ name: 'groups', schema: 'master_company' })
 @Index(['group_name', 'status'])
 export class Group {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuid_generate_v7()' })
-  id: string;
+  id!: string;
 
   @Index()
   @Column({ unique: true, length: 100 })
-  group_name: string;
+  group_name!: string;
 
   @Index()
   @Column({ unique: true, length: 20 })
-  group_type: string;
+  group_type!: string;
 
   @Column({ type: 'uuid' })
   @Index()
-  station_id: string;
+  station_id!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   @Index()
-  description: string;
+  description!: string;
 
   @Column({ default: 'Active', length: 20 })
   @Index()
-  status: string;
+  status!: string;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ManyToOne(() => Stations, (station) => station.branch, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'station_id' })
-  stations: Stations;
+  stations!: Stations;
+
+  @OneToMany(() => Vehicle, (vehicle) => vehicle.group)
+  vehicles!: Vehicle[];
 }

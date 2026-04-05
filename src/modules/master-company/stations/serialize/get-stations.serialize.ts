@@ -2,41 +2,41 @@ import { Expose, Transform } from 'class-transformer';
 
 export class GetStationsSerialize {
   @Expose()
-  id: string;
+  id!: string;
 
   @Expose()
-  station_name: string;
+  station_name!: string;
 
   @Expose()
-  gps_location: string;
+  gps_location!: string;
 
   @Expose()
-  description: string;
+  description!: string;
 
   @Expose()
-  phone: string;
+  phone!: string;
 
   @Expose()
-  city: string;
+  city!: string;
 
   @Expose()
-  division: string;
+  division!: string;
 
   @Expose()
-  address: string;
+  address!: string;
 
   @Expose()
-  status: string;
+  status!: string;
 
   @Expose()
   @Transform(({ obj }: { obj: { branch?: { id: string } } }) => {
     return obj.branch?.id || null;
   })
-  branches_id: string;
+  branches_id!: string;
 
-    @Expose()
+  @Expose()
   @Transform(({ obj }: { obj: { branch?: { branches_name: string } } }) => {
     return obj.branch?.branches_name || null;
   })
-  branches_name: string;
+  branches_name!: string;
 }

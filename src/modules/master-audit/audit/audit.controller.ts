@@ -3,7 +3,12 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 
 import { AtGuard } from 'src/common/guards/at.guard';
 import { MasterAuditService } from './audit.service';
-import type { PaginateAuditQuery, UserActivityStat, ActionTypeStat, ModuleActivityStat } from './audit.service';
+import type {
+  PaginateAuditQuery,
+  UserActivityStat,
+  ActionTypeStat,
+  ModuleActivityStat,
+} from './audit.service';
 @Controller('master-audit')
 @UseGuards(AtGuard)
 export class MasterAuditController {

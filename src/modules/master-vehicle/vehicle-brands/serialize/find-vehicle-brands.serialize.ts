@@ -2,23 +2,23 @@ import { Expose } from 'class-transformer';
 
 export class FindVehicleBrandsSerialize {
   @Expose()
-  id: string;
+  id!: string;
 
   @Expose()
-  image: string;
+  image!: string;
 
   @Expose()
-  vehicle_brand_name: string;
+  vehicle_brand_name!: string;
 
   @Expose()
-  country_of_origin: string;
+  country_of_origin!: string;
 
   @Expose()
-  manufacturer: string;
+  manufacturer!: string;
 
   @Expose()
-  description: string;
+  description!: string;
 
   @Expose()
-  status: string;
+  status!: string;
 }

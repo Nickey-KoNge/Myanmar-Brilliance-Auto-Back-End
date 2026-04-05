@@ -8,58 +8,63 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { Branches } from '../../branches/entities/branches.entity';
+import { Vehicle } from '../../../master-vehicle/vehicle/entities/vehicle.entity';
 
 @Entity({ name: 'stations', schema: 'master_company' })
 @Index(['division', 'status'])
 export class Stations {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuid_generate_v7()' })
-  id: string;
+  id!: string;
 
   @Index()
   @Column({ unique: true, length: 100 })
-  station_name: string;
+  station_name!: string;
 
   @Column({ type: 'uuid' })
   @Index()
-  branches_id: string;
+  branches_id!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  gps_location: string;
+  gps_location!: string;
 
   @Index()
   @Column({ type: 'varchar', length: 100 })
-  division: string;
+  division!: string;
 
   @Index()
   @Column({ type: 'varchar', length: 50 })
-  city: string;
+  city!: string;
 
   @Column({ type: 'varchar', length: 100 })
-  address: string;
+  address!: string;
 
   @Column({ nullable: true, length: 20 })
   @Index()
-  phone: string;
+  phone!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   @Index()
-  description: string;
+  description!: string;
 
   @Column({ default: 'Active', length: 20 })
   @Index()
-  status: string;
+  status!: string;
 
   @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updated_at: Date;
+  updated_at!: Date;
 
   @ManyToOne(() => Branches, (branch) => branch.stations, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'branches_id' })
-  branch: Branches;
+  branch!: Branches;
+
+  @OneToMany(() => Vehicle, (vehicle) => vehicle.station)
+  vehicles!: Vehicle[];
 }
