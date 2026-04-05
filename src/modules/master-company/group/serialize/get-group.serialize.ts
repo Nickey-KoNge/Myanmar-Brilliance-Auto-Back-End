@@ -2,10 +2,8 @@ import { Expose } from 'class-transformer';
 
 export class GetStationsSerialize {
   @Expose()
-  id: string;
-
-  
+  id!: string;
 
   @Expose()
-  status: string;
+  status!: string;
 }

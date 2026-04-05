@@ -4,19 +4,19 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 export class CreateBranchesDto {
   @IsNotEmpty()
   @IsString()
-  branches_name: string;
+  branches_name!: string;
 
   @IsNotEmpty()
   @IsString()
-  gps_location: string;
+  gps_location!: string;
 
   @IsNotEmpty()
   @IsString()
-  description: string;
+  description!: string;
 
   @IsNotEmpty()
   @IsString()
-  phone: string;
+  phone!: string;
 
   @IsOptional()
   @IsString()
@@ -24,17 +24,17 @@ export class CreateBranchesDto {
 
   @IsNotEmpty()
   @IsString()
-  address: string;
+  address!: string;
 
   @IsNotEmpty()
   @IsString()
-  city: string;
+  city!: string;
 
   @IsNotEmpty()
   @IsString()
-  division: string;
+  division!: string;
 
   @IsNotEmpty()
   @IsString()
-  company_id: string;
+  company_id!: string;
 }

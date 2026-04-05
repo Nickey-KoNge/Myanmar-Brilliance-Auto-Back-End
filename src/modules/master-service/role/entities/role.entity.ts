@@ -18,25 +18,25 @@ export class Role {
     primary: true,
     default: () => 'uuid_generate_v7()',
   })
-  id: string;
+  id!: string;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 50 })
-  role_name: string;
+  role_name!: string;
 
   @Column({ type: 'varchar', length: 20, default: 'Active' })
   @Index()
-  status: string;
+  status!: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @DeleteDateColumn()
-  deleted_at: Date;
+  deleted_at!: Date;
 
   @OneToMany(() => Staff, (staff) => staff.role)
-  staff: Staff[];
+  staff!: Staff[];
 }

@@ -11,11 +11,11 @@ export class CreateDriverDto {
   // Core Identity Attributes
   @IsString()
   @IsNotEmpty()
-  driver_name: string;
+  driver_name!: string;
 
   @IsString()
   @IsNotEmpty()
-  nrc: string;
+  nrc!: string;
 
   @IsDateString()
   @IsOptional()
@@ -28,15 +28,15 @@ export class CreateDriverDto {
   // Contact & Address Details
   @IsString()
   @IsNotEmpty()
-  phone: string;
+  phone!: string;
 
   @IsString()
   @IsNotEmpty()
-  country: string;
+  country!: string;
 
   @IsString()
   @IsNotEmpty()
-  city: string;
+  city!: string;
 
   @IsDateString()
   @IsOptional()
@@ -44,7 +44,7 @@ export class CreateDriverDto {
 
   @IsString()
   @IsNotEmpty()
-  address: string;
+  address!: string;
 
   // Professional Assignment
   @IsOptional()
@@ -58,11 +58,11 @@ export class CreateDriverDto {
 
   @IsString()
   @IsNotEmpty()
-  license_no: string;
+  license_no!: string;
 
   @IsString()
   @IsNotEmpty()
-  license_type: string;
+  license_type!: string;
 
   @IsDateString()
   @IsOptional()

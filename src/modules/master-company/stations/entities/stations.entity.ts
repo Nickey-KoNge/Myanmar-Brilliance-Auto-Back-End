@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { Branches } from '../../branches/entities/branches.entity';
 import { Vehicle } from '../../../master-vehicle/vehicle/entities/vehicle.entity';
+import { VehicleDriverAssign } from '../../../master-vehicle/driver-assign/entities/vehicle-driver-assign.entity';
 
 @Entity({ name: 'stations', schema: 'master_company' })
 @Index(['division', 'status'])
@@ -67,4 +68,7 @@ export class Stations {
 
   @OneToMany(() => Vehicle, (vehicle) => vehicle.station)
   vehicles!: Vehicle[];
+
+  @OneToMany(() => VehicleDriverAssign, (assign) => assign.station)
+  driver_assignments!: VehicleDriverAssign[];
 }

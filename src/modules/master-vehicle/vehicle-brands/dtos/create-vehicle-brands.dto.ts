@@ -4,22 +4,22 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 export class CreateVehicleBrandsDto {
   @IsString()
   @IsNotEmpty()
-  vehicle_brand_name: string;
+  vehicle_brand_name!: string;
 
   @IsString()
   @IsNotEmpty()
-  country_of_origin: string;
+  country_of_origin!: string;
 
   @IsString()
   @IsNotEmpty()
-  manufacturer: string;
+  manufacturer!: string;
 
   @IsOptional()
   image?: any;
 
   @IsString()
   @IsNotEmpty()
-  description: string;
+  description!: string;
 
   @IsOptional()
   status?: string;

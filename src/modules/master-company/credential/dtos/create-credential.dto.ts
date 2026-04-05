@@ -4,13 +4,13 @@ import { IsNotEmpty, IsString } from 'class-validator';
 export class CreateCredentialDto {
   @IsNotEmpty()
   @IsString()
-  email: string;
+  email!: string;
 
   @IsNotEmpty()
   @IsString()
-  password: string;
+  password!: string;
 
   @IsNotEmpty()
   @IsString()
-  status: string;
+  status!: string;
 }

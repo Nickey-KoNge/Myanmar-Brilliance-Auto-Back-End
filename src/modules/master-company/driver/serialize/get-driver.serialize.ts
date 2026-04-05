@@ -2,17 +2,17 @@ import { Expose } from 'class-transformer';
 
 export class GetDriverSerialize {
   @Expose()
-  id: string;
+  id!: string;
 
   @Expose()
-  city: string;
+  city!: string;
 
   @Expose()
-  country: string;
+  country!: string;
 
   @Expose()
-  address: string;
+  address!: string;
 
   @Expose()
-  status: string;
+  status!: string;
 }

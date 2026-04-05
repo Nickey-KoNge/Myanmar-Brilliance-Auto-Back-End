@@ -8,13 +8,14 @@ import {
   Index,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 
 import { VehicleModels } from '../../vehicle-model/entities/vehicle-model.entity';
 import { Stations } from '../../../master-company/stations/entities/stations.entity';
 import { Group } from '../../../master-company/group/entities/group.entity';
 // import { Supplier } from '../../supplier/entities/supplier.entity';
-
+import { VehicleDriverAssign } from '../../../master-vehicle/driver-assign/entities/vehicle-driver-assign.entity';
 @Entity({ name: 'vehicles', schema: 'master_vehicle' })
 @Index(['vehicle_name', 'license_plate', 'status'])
 export class Vehicle {
@@ -99,7 +100,7 @@ export class Vehicle {
   vehicle_license_exp!: Date;
 
   @Column({ type: 'date', nullable: true })
-  service_intervals!: Date; // 💡 "service_interals" ကို စာလုံးပေါင်း အမှန်ပြင်ထားပေးပါသည်
+  service_intervals!: Date;
 
   @Column({ type: 'date', nullable: true })
   purchase_date!: Date;
@@ -118,4 +119,7 @@ export class Vehicle {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  @OneToMany(() => VehicleDriverAssign, (assign) => assign.vehicle)
+  assignments!: VehicleDriverAssign[];
 }

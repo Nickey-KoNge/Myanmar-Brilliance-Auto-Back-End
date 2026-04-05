@@ -9,15 +9,15 @@ import {
 export class CreateStaffDto {
   @IsEmail()
   @IsNotEmpty()
-  email: string;
+  email!: string;
 
   @IsNotEmpty()
   @IsString()
-  password: string;
+  password!: string;
 
   @IsNotEmpty()
   @IsString()
-  staffName: string;
+  staffName!: string;
 
   @IsOptional()
   @IsString()
@@ -37,39 +37,39 @@ export class CreateStaffDto {
 
   @IsNotEmpty()
   @IsString()
-  company: string;
+  company!: string;
 
   @IsNotEmpty()
   @IsString()
-  branch: string;
+  branch!: string;
 
   @IsNotEmpty()
   @IsString()
-  role: string;
+  role!: string;
 
   @IsNotEmpty()
   @IsString()
-  street_address: string;
+  street_address!: string;
 
   @IsNotEmpty()
   @IsString()
-  city: string;
+  city!: string;
 
   @IsNotEmpty()
   @IsString()
-  country: string;
+  country!: string;
 
   @IsNotEmpty()
   @IsDateString()
-  dob: string;
+  dob!: string;
 
   @IsNotEmpty()
   @IsString()
-  nrc: string;
+  nrc!: string;
 
   @IsNotEmpty()
   @IsString()
-  gender: string;
+  gender!: string;
 
   @IsOptional()
   image?: any;
