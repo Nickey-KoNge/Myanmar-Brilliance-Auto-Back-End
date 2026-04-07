@@ -251,54 +251,75 @@ export class MasterCompanyBranchesService {
     }
   }
   async restoreBranch(auditId: string, userId: string): Promise<Branches> {
-    // ၁။ Audit record ကို ရှာပါ
     const auditRecord = await this.auditService.findOne(auditId);
 
     if (auditRecord.entity_name !== 'branches') {
       throw new BadRequestException('This audit record is not for branches');
     }
 
-    const dataToRestore = auditRecord.old_values;
+    const rawOldValues = (
+      typeof auditRecord.old_values === 'string'
+        ? JSON.parse(auditRecord.old_values)
+        : auditRecord.old_values
+    ) as Record<string, unknown> | null;
 
-    if (!dataToRestore) {
+    if (!rawOldValues) {
       throw new BadRequestException(
         'No old data available to restore from this action',
       );
     }
 
-    // ၃။ Database ထဲတွင် ရှိမရှိ စစ်ဆေးပါ
+    const safeDataToRestore = JSON.parse(
+      JSON.stringify(rawOldValues),
+    ) as Record<string, unknown>;
+    delete safeDataToRestore['deleted_at'];
+    delete safeDataToRestore['updated_at'];
+
     const existingBranch = await this.branchesRepository.findOne({
       where: { id: auditRecord.entity_id },
       withDeleted: true,
     });
 
+    let restored: Branches;
+
+    const toPlainObject = (data: unknown): Record<string, unknown> => {
+      return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+    };
+
+    // BEFORE STATE
+    const beforeState =
+      existingBranch !== null
+        ? toPlainObject(existingBranch)
+        : { status: 'Permanently Deleted / Not Exists' };
+
     if (existingBranch) {
-      Object.assign(existingBranch, dataToRestore);
-      const restored = await this.branchesRepository.save(existingBranch);
+      Object.assign(existingBranch, safeDataToRestore);
 
-      // Audit ပြန်မှတ်မည်
-      await this.auditService.logAction(
-        'branches',
-        restored.id,
-        'RESTORE',
-        null,
-        null,
-        userId,
-      );
-      return restored;
+      if (existingBranch.deleted_at) {
+        restored = await this.branchesRepository.recover(existingBranch);
+      } else {
+        restored = await this.branchesRepository.save(existingBranch);
+      }
     } else {
-      const newBranch = this.branchesRepository.create(dataToRestore);
-      const restored = await this.branchesRepository.save(newBranch);
-
-      await this.auditService.logAction(
-        'branches',
-        restored.id,
-        'RESTORE',
-        null,
-        null,
-        userId,
-      );
-      return restored;
+      const newBranch = this.branchesRepository.create(safeDataToRestore);
+      restored = await this.branchesRepository.save(newBranch);
     }
+
+    const afterState = {
+      id: restored.id,
+      ...safeDataToRestore,
+    };
+
+    // AUDIT LOG
+    await this.auditService.logAction(
+      'branches',
+      restored.id,
+      'RESTORE',
+      beforeState,
+      afterState,
+      userId,
+    );
+
+    return restored;
   }
 }

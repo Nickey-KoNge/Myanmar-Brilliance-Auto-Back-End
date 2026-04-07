@@ -18,17 +18,33 @@ export class MasterAuditController {
   async findAll(@Query() query: PaginateAuditQuery) {
     return await this.auditService.findAll(query);
   }
+  @Get('analytics/summary')
+  async getDashboardSummary(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.auditService.getDashboardSummary(startDate, endDate);
+  }
   @Get('analytics/user-activity')
-  async getUserActivityStats(): Promise<UserActivityStat[]> {
-    return await this.auditService.getUserActivityStats();
+  async getUserActivityStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<UserActivityStat[]> {
+    return await this.auditService.getUserActivityStats(startDate, endDate);
   }
   @Get('analytics/action-types')
-  async getActionTypeStats(): Promise<ActionTypeStat[]> {
-    return await this.auditService.getActionTypeStats();
+  async getActionTypeStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<ActionTypeStat[]> {
+    return await this.auditService.getActionTypeStats(startDate, endDate);
   }
   @Get('analytics/module-activity')
-  async getModuleActivityStats(): Promise<ModuleActivityStat[]> {
-    return await this.auditService.getModuleActivityStats();
+  async getModuleActivityStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<ModuleActivityStat[]> {
+    return await this.auditService.getModuleActivityStats(startDate, endDate);
   }
   @Get(':entityName/:entityId')
   async findByEntity(
