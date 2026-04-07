@@ -15,6 +15,9 @@ import { MasterServiceRoleModule } from './modules/master-service/role/master-se
 import { MasterCompanyStationsModule } from './modules/master-company/stations/master-company.stations.module';
 import { DriverModule } from './modules/master-company/driver/driver.module';
 import { VehicleBrandsModule } from './modules/master-vehicle/vehicle-brands/vehicle-brands.module';
+import { VehicleModelController } from './modules/master-vehicle/vehicle-model/vehicle-model.controller';
+import { VehicleModelService } from './modules/master-vehicle/vehicle-model/vehicle-model.service';
+import { VehicleModelModule } from './modules/master-vehicle/vehicle-model/vehicle-model.module';
 
 @Module({
   imports: [
@@ -41,6 +44,7 @@ import { VehicleBrandsModule } from './modules/master-vehicle/vehicle-brands/veh
     MasterServiceRoleModule,
     DriverModule,
     VehicleBrandsModule,
+    VehicleModelModule,
   ],
   controllers: [],
   providers: [],
