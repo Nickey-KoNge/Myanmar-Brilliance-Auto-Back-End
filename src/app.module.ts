@@ -18,7 +18,11 @@ import { VehicleBrandsModule } from './modules/master-vehicle/vehicle-brands/veh
 import { VehicleModelController } from './modules/master-vehicle/vehicle-model/vehicle-model.controller';
 import { VehicleModelService } from './modules/master-vehicle/vehicle-model/vehicle-model.service';
 import { VehicleModelModule } from './modules/master-vehicle/vehicle-model/vehicle-model.module';
+
 import { MasterVehicleModule } from './modules/master-vehicle/vehicle/master-vehicle.vehicle.module';
+
+import { VehicleDriverAssignModule } from './modules/master-vehicle/driver-assign/vehicle-driver-assign.module';
+
 
 @Module({
   imports: [
@@ -46,8 +50,12 @@ import { MasterVehicleModule } from './modules/master-vehicle/vehicle/master-veh
     DriverModule,
     VehicleBrandsModule,
     VehicleModelModule,
+<<<<<<< HEAD
     MasterVehicleModule,
     
+=======
+    VehicleDriverAssignModule,
+>>>>>>> 388cdfc002d57c20b3d2e3cf49a82eb6ea9e565c
   ],
   controllers: [],
   providers: [],
