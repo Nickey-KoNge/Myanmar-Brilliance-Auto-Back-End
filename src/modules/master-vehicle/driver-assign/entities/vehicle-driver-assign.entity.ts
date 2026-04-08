@@ -56,12 +56,6 @@ export class VehicleDriverAssign {
   @Column({ type: 'date', nullable: true })
   returned_at!: Date;
 
-  @Column({ type: 'varchar', length: 10, nullable: true })
-  start_odometer!: string;
-
-  @Column({ type: 'varchar', length: 10, nullable: true })
-  end_odometer!: string;
-
   @Column({ default: 'Active', length: 20 })
   @Index()
   status!: string;

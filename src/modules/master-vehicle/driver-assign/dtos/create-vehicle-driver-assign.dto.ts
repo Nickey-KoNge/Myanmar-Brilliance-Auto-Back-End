@@ -29,13 +29,5 @@ export class CreateVehicleDriverAssignDto {
 
   @IsOptional()
   @IsString()
-  start_odometer?: string;
-
-  @IsOptional()
-  @IsString()
-  end_odometer?: string;
-
-  @IsOptional()
-  @IsString()
   status?: string;
 }

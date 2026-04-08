@@ -23,12 +23,6 @@ export class GetVehicleDriverAssignSerialize {
   returned_at!: string;
 
   @Expose()
-  start_odometer!: string;
-
-  @Expose()
-  end_odometer!: string;
-
-  @Expose()
   status!: string;
 
   @Expose()
