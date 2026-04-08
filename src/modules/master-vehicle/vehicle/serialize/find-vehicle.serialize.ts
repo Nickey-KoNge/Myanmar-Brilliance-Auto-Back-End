@@ -21,23 +21,23 @@ export class FindVehicleSerialize {
   image!: string;
 
   @Expose()
-  @Transform(
-    ({ obj }: { obj: { vehicle_model?: { vehicle_model_name: string } } }) =>
-      obj.vehicle_model?.vehicle_model_name || null,
-  )
+  station_id!: string;
+
+  @Expose()
+  group_id!: string;
+
+  @Expose()
+  vehicle_model_id!: string;
+
+
+
+
+  @Expose()
   vehicle_model_name!: string;
 
   @Expose()
-  @Transform(
-    ({ obj }: { obj: { station?: { station_name: string } } }) =>
-      obj.station?.station_name || null,
-  )
   station_name!: string;
 
   @Expose()
-  @Transform(
-    ({ obj }: { obj: { group?: { group_name: string } } }) =>
-      obj.group?.group_name || null,
-  )
   group_name!: string;
 }

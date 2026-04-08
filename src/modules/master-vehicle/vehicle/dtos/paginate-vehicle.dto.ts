@@ -7,12 +7,12 @@ export class PaginateVehicleDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page?: number = 1;
+  page: number = 1;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  limit?: number = 10;
+  limit: number = 10;
 
   @IsOptional()
   @IsString()

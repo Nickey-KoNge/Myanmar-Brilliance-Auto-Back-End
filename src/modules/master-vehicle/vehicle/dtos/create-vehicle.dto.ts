@@ -68,5 +68,9 @@ export class CreateVehicleDto {
 
   @IsOptional()
   @IsString()
+  image?: string;
+
+  @IsOptional()
+  @IsString()
   status?: string;
 }
