@@ -11,6 +11,8 @@ import {
 } from 'typeorm';
 import { Audit } from './entities/audit.entity';
 import { AuditGateway } from './audit.gateway';
+import * as ExcelJS from 'exceljs';
+import { Response } from 'express';
 
 export interface PaginateAuditQuery {
   limit?: number | string;
@@ -270,5 +272,56 @@ export class MasterAuditService {
     });
 
     return { totalLogs, activeUsers, topModule, criticalActions };
+  }
+  async exportToExcel(res: Response, query: PaginateAuditQuery) {
+    const dateCondition: FindOptionsWhere<Audit> = {};
+    if (query.startDate && query.endDate) {
+      dateCondition.created_at = Between(
+        new Date(query.startDate),
+        new Date(`${query.endDate}T23:59:59.999Z`),
+      );
+    }
+
+    const where: FindOptionsWhere<Audit> = { ...dateCondition };
+    if (query.entity_name) where.entity_name = query.entity_name;
+    if (query.search) where.action = query.search; // Action Filter အတွက် သုံးနိုင်သည်
+
+    const logs = await this.auditRepository.find({
+      where,
+      order: { created_at: 'DESC' },
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Audit Logs');
+
+    worksheet.columns = [
+      { header: 'Date & Time', key: 'date', width: 25 },
+      { header: 'User Name', key: 'user', width: 20 },
+      { header: 'Action', key: 'action', width: 15 },
+      { header: 'Module Name', key: 'module', width: 20 },
+      { header: 'Entity ID', key: 'id', width: 35 },
+    ];
+
+    logs.forEach((log) => {
+      worksheet.addRow({
+        date: log.created_at.toLocaleString(),
+        user: log.performed_by,
+        action: log.action,
+        module: log.entity_name,
+        id: log.entity_id,
+      });
+    });
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Audit_Report_${Date.now()}.xlsx`,
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
   }
 }

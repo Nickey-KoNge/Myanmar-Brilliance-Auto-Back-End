@@ -23,7 +23,6 @@ import { MasterVehicleModule } from './modules/master-vehicle/vehicle/master-veh
 
 import { VehicleDriverAssignModule } from './modules/master-vehicle/driver-assign/vehicle-driver-assign.module';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -50,12 +49,8 @@ import { VehicleDriverAssignModule } from './modules/master-vehicle/driver-assig
     DriverModule,
     VehicleBrandsModule,
     VehicleModelModule,
-<<<<<<< HEAD
     MasterVehicleModule,
-    
-=======
     VehicleDriverAssignModule,
->>>>>>> 388cdfc002d57c20b3d2e3cf49a82eb6ea9e565c
   ],
   controllers: [],
   providers: [],

@@ -9,6 +9,8 @@ import type {
   ActionTypeStat,
   ModuleActivityStat,
 } from './audit.service';
+import { Res } from '@nestjs/common';
+import type { Response } from 'express';
 @Controller('master-audit')
 @UseGuards(AtGuard)
 export class MasterAuditController {
@@ -45,6 +47,10 @@ export class MasterAuditController {
     @Query('endDate') endDate?: string,
   ): Promise<ModuleActivityStat[]> {
     return await this.auditService.getModuleActivityStats(startDate, endDate);
+  }
+  @Get('export/excel')
+  async exportExcel(@Query() query: PaginateAuditQuery, @Res() res: Response) {
+    return await this.auditService.exportToExcel(res, query);
   }
   @Get(':entityName/:entityId')
   async findByEntity(
