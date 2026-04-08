@@ -69,8 +69,7 @@ export class CreateDriverDto {
   license_expiry?: string;
 
   @IsString()
-  @IsOptional()
-  driving_exp?: string;
+  driving_exp!: string;
 
   @IsString()
   @IsOptional()
