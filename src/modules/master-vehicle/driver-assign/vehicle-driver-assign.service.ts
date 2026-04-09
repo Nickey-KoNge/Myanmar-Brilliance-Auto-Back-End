@@ -42,7 +42,10 @@ export class VehicleDriverAssignService {
         throw new NotFoundException('Driver or vehicle not found.');
       }
 
-      // Deactivate any existing active assignment for this vehicle
+      if (driver.status === 'Busy' || vehicle.status === 'Busy') {
+        throw new ConflictException('Driver or Vehicle is already Busy');
+      }
+
       await queryRunner.manager.update(
         VehicleDriverAssign,
         { vehicle_id: dto.vehicle_id, status: 'Active' },
@@ -55,9 +58,12 @@ export class VehicleDriverAssignService {
         status: 'Active',
       });
 
-      const savedAssign = await queryRunner.manager.save(newAssign);
-      await queryRunner.commitTransaction();
+      await queryRunner.manager.update(Vehicle, vehicle.id, { status: 'Busy' });
+      await queryRunner.manager.update(Driver, driver.id, { status: 'Busy' });
 
+      const savedAssign = await queryRunner.manager.save(newAssign);
+
+      await queryRunner.commitTransaction();
       return savedAssign;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -216,41 +222,54 @@ export class VehicleDriverAssignService {
       if (!assign) throw new NotFoundException(`Assignment not found`);
 
       if (dto.vehicle_id && dto.vehicle_id !== assign.vehicle_id) {
-        const vehicle = await queryRunner.manager.findOneBy(Vehicle, {
+        const newVehicle = await queryRunner.manager.findOneBy(Vehicle, {
           id: dto.vehicle_id,
         });
-        if (!vehicle) throw new NotFoundException(`New vehicle not found`);
 
-        const isBusy = await queryRunner.manager.findOneBy(
-          VehicleDriverAssign,
-          {
-            vehicle_id: dto.vehicle_id,
-            status: 'Active',
-          },
-        );
-        if (isBusy)
-          throw new ConflictException('New vehicle is already assigned');
+        if (!newVehicle) throw new NotFoundException(`New vehicle not found`);
+        if (newVehicle.status === 'Busy') {
+          throw new ConflictException('New vehicle is already assigned/Busy');
+        }
 
-        assign.vehicle = vehicle;
+        await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
+          status: 'Active',
+        });
+        await queryRunner.manager.update(Vehicle, newVehicle.id, {
+          status: 'Busy',
+        });
+
+        assign.vehicle = newVehicle;
       }
 
       if (dto.driver_id && dto.driver_id !== assign.driver_id) {
-        const driver = await queryRunner.manager.findOneBy(Driver, {
+        const newDriver = await queryRunner.manager.findOneBy(Driver, {
           id: dto.driver_id,
         });
-        if (!driver) throw new NotFoundException(`New driver not found`);
 
-        const isBusy = await queryRunner.manager.findOneBy(
-          VehicleDriverAssign,
-          {
-            driver_id: dto.driver_id,
-            status: 'Active',
-          },
-        );
-        if (isBusy)
-          throw new ConflictException('New driver is already assigned');
+        if (!newDriver) throw new NotFoundException(`New driver not found`);
+        if (newDriver.status === 'Busy') {
+          throw new ConflictException('New driver is already assigned/Busy');
+        }
 
-        assign.driver = driver;
+        await queryRunner.manager.update(Driver, assign.driver_id, {
+          status: 'Active',
+        });
+        await queryRunner.manager.update(Driver, newDriver.id, {
+          status: 'Busy',
+        });
+
+        assign.driver = newDriver;
+      }
+
+      // --- Handle Status Change (Manual Override) ---
+      // If the assignment itself is being marked Inactive, free up the resources
+      if (dto.status === 'Inactive' && assign.status === 'Active') {
+        await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
+          status: 'Active',
+        });
+        await queryRunner.manager.update(Driver, assign.driver_id, {
+          status: 'Active',
+        });
       }
 
       Object.assign(assign, dto);
@@ -267,9 +286,33 @@ export class VehicleDriverAssignService {
   }
 
   async remove(id: string) {
-    const result = await this.vehicleDriverAssignRepo.delete(id);
-    if (result.affected === 0)
-      throw new NotFoundException(`Assignment not found`);
-    return { success: true, id };
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const assign = await queryRunner.manager.findOne(VehicleDriverAssign, {
+        where: { id },
+      });
+
+      if (!assign) throw new NotFoundException(`Assignment not found`);
+
+      await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
+        status: 'Active',
+      });
+      await queryRunner.manager.update(Driver, assign.driver_id, {
+        status: 'Active',
+      });
+
+      await queryRunner.manager.delete(VehicleDriverAssign, id);
+
+      await queryRunner.commitTransaction();
+      return { success: true, id };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }
