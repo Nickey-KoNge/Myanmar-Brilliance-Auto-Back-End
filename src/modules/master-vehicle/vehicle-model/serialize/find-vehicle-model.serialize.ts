@@ -1,39 +1,46 @@
-import { Expose, Transform } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 
-export class FindVehicleModelSerialize {
+class VehicleModelItemDto {
+  @Expose() id!: string;
+  @Expose() vehicle_model_name!: string;
+
+  @Expose() vehicle_brand_name!: string;
+  @Expose() vehicle_brand_id!: string;
+
+  @Expose() body_type!: string;
+  @Expose() fuel_type!: string;
+  @Expose() engine_capacity!: string;
+  @Expose() transmission!: string;
+  @Expose() seat!: number;
+  @Expose() status!: string;
+  @Expose() createdAt!: Date;
+}
+
+class BrandItemDto {
+  @Expose() id!: string;
+  @Expose() name!: string;
+}
+
+class MetaDto {
+  @Expose() totalItems!: number;
+  @Expose() itemCount!: number;
+  @Expose() itemsPerPage!: number;
+  @Expose() totalPages!: number;
+  @Expose() currentPage!: number;
+  @Expose() activeItems!: number;
+  @Expose() inactiveItems!: number;
+}
+
+export class VehicleModelDto {
   @Expose()
-  id!: string;
+  @Type(() => VehicleModelItemDto)
+  items!: VehicleModelItemDto[];
 
   @Expose()
-  vehicle_model_name!: string;
+  @Type(() => BrandItemDto)
+  brands!: BrandItemDto[];
 
   @Expose()
-  vehicle_brand_id!: string;
-
-  // --- Vehicle Brand ---
-
-  @Expose()
-  @Transform(
-    ({ obj }: { obj: { vehicle_brand?: { vehicle_brand_name: string } } }) =>
-      obj.vehicle_brand?.vehicle_brand_name || null,
-  )
-  vehicle_brand_name!: string;
-
-  @Expose()
-  body_type!: string;
-
-  @Expose()
-  fuel_type!: string;
-
-  @Expose()
-  transmission!: string;
-
-  @Expose()
-  engine_capacity!: string;
-
-  @Expose()
-  year_of_release!: string;
-
-  @Expose()
-  status!: string;
+  @Type(() => MetaDto)
+  meta!: MetaDto;
 }

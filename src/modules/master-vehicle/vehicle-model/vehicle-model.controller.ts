@@ -1,46 +1,72 @@
 import {
   Controller,
-  Get,
   Post,
   Body,
-  Patch,
-  Param,
-  Delete,
+  Get,
   Query,
-  UseInterceptors,
-  ClassSerializerInterceptor,
+  Delete,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  // UseGuards,
 } from '@nestjs/common';
+import { Serialize } from '../../../common/interceptors/serialize.interceptor';
 import { VehicleModelService } from './vehicle-model.service';
 import { CreateVehicleModelDto } from './dtos/create-vehicle-model.dto';
+import { UpdateVehicleModelDto } from './dtos/update-vehicle-model.dto';
 import { PaginateVehicleModelDto } from './dtos/paginate-vehicle-model.dto';
+import { VehicleModelDto } from './serialize/find-vehicle-model.serialize';
+import { GetVehicleModelSerialize } from './serialize/get-vehicle-model.serialize';
+// import { AtGuard } from '../../../common/guards/at.guard';
 
 @Controller('vehicle-model')
-@UseInterceptors(ClassSerializerInterceptor)
+// @UseGuards(AtGuard)
 export class VehicleModelController {
-  constructor(private readonly service: VehicleModelService) {}
-
-  @Post()
-  create(@Body() dto: CreateVehicleModelDto) {
-    return this.service.create(dto);
-  }
+  constructor(private readonly vehicleModelService: VehicleModelService) {}
 
   @Get('list')
-  findAll(@Query() query: PaginateVehicleModelDto) {
-    return this.service.findAll(query);
+  @Serialize(VehicleModelDto) // List အတွက် Serializer
+  async findAll(
+    @Query('search') search?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('vehicle_brand_id') vehicle_brand_id?: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    return this.vehicleModelService.findAll({
+      search,
+      startDate,
+      endDate,
+      vehicle_brand_id,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  @Serialize(GetVehicleModelSerialize) // Single data အတွက် Serializer
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.vehicleModelService.findOne(id);
+  }
+
+  @Post('register')
+  @Serialize(GetVehicleModelSerialize)
+  async create(@Body() dto: CreateVehicleModelDto) {
+    return this.vehicleModelService.create(dto);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: any) {
-    return this.service.update(id, dto);
+  @Serialize(GetVehicleModelSerialize)
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateVehicleModelDto,
+  ) {
+    return this.vehicleModelService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.vehicleModelService.remove(id);
   }
 }
