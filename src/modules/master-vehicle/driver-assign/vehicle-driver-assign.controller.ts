@@ -1,21 +1,52 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CreateVehicleDriverAssignDto } from './dtos/create-vehicle-driver-assign.dto';
 import { VehicleDriverAssignService } from './vehicle-driver-assign.service';
 import { PaginateVehicleDriverAssignDto } from './dtos/paginate-vehicle-driver-assign.dto';
+import { UpdateVehicleDriverDto } from './dtos/update-vehicle-driver-assign.dto';
 
 @Controller('master-vehicle/vehicle-driver-assign')
 export class VehicleDriverAssignController {
   constructor(
-    private readonly driverAssignService: VehicleDriverAssignService,
+    private readonly vehicleDriverAssignService: VehicleDriverAssignService,
   ) {}
 
   @Post()
   create(@Body() createVehicleDriverAssignDto: CreateVehicleDriverAssignDto) {
-    return this.driverAssignService.create(createVehicleDriverAssignDto);
+    return this.vehicleDriverAssignService.create(createVehicleDriverAssignDto);
   }
 
   @Get()
   async findAll(@Query() query: PaginateVehicleDriverAssignDto) {
-    return await this.driverAssignService.findAll(query);
+    return await this.vehicleDriverAssignService.findAll(query);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.vehicleDriverAssignService.findOne(id);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() UpdateVehicleDriverDto: UpdateVehicleDriverDto,
+  ) {
+    return await this.vehicleDriverAssignService.update(
+      id,
+      UpdateVehicleDriverDto,
+    );
+  }
+
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return await this.vehicleDriverAssignService.remove(id);
   }
 }
