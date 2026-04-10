@@ -15,13 +15,6 @@ import { MasterServiceRoleModule } from './modules/master-service/role/master-se
 import { MasterCompanyStationsModule } from './modules/master-company/stations/master-company.stations.module';
 import { DriverModule } from './modules/master-company/driver/driver.module';
 import { VehicleBrandsModule } from './modules/master-vehicle/vehicle-brands/vehicle-brands.module';
-import { VehicleModelController } from './modules/master-vehicle/vehicle-model/vehicle-model.controller';
-import { VehicleModelService } from './modules/master-vehicle/vehicle-model/vehicle-model.service';
-import { VehicleModelModule } from './modules/master-vehicle/vehicle-model/vehicle-model.module';
-
-import { MasterVehicleModule } from './modules/master-vehicle/vehicle/master-vehicle.vehicle.module';
-
-import { VehicleDriverAssignModule } from './modules/master-vehicle/driver-assign/vehicle-driver-assign.module';
 
 @Module({
   imports: [
@@ -35,9 +28,9 @@ import { VehicleDriverAssignModule } from './modules/master-vehicle/driver-assig
       autoLoadEntities: true,
     }),
 
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'public'),
-    }),
+    // ServeStaticModule.forRoot({
+    //   rootPath: join(process.cwd(), 'public'),
+    // }),
 
     MasterCompanyBranchesModule,
     MasterCompanyStationsModule,
@@ -48,9 +41,6 @@ import { VehicleDriverAssignModule } from './modules/master-vehicle/driver-assig
     MasterServiceRoleModule,
     DriverModule,
     VehicleBrandsModule,
-    VehicleModelModule,
-    MasterVehicleModule,
-    VehicleDriverAssignModule,
   ],
   controllers: [],
   providers: [],
