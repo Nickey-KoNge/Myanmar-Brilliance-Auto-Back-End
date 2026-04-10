@@ -5,9 +5,10 @@ import { MasterCompanyStationsController } from "./master-company.stations.contr
 import { MasterCompanyStationsService } from "./master-company.stations.service";
 import { OpService } from "src/common/service/op.service";
 import { ImgFileService } from "src/common/service/imgfile.service";
+import { MasterAuditModule } from "src/modules/master-audit/audit/audit.module";
 
 @Module({
-    imports:[TypeOrmModule.forFeature([Stations])],
+    imports:[TypeOrmModule.forFeature([Stations]),MasterAuditModule],
     controllers:[MasterCompanyStationsController],
     providers:[MasterCompanyStationsService,OpService,ImgFileService],
 })
