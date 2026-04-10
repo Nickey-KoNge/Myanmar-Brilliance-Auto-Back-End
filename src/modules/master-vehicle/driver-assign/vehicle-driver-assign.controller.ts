@@ -49,4 +49,9 @@ export class VehicleDriverAssignController {
   async delete(@Param('id') id: string) {
     return await this.vehicleDriverAssignService.remove(id);
   }
+
+  @Patch(':id/complete')
+  async completeAssignment(@Param('id') id: string) {
+    return await this.vehicleDriverAssignService.completeAssignment(id);
+  }
 }

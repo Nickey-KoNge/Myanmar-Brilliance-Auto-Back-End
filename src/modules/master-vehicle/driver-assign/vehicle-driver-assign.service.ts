@@ -55,7 +55,7 @@ export class VehicleDriverAssignService {
       const newAssign = queryRunner.manager.create(VehicleDriverAssign, {
         ...dto,
         assigned_at: dto.assigned_at || new Date(),
-        status: 'Active',
+        status: 'Ongoing',
       });
 
       await queryRunner.manager.update(Vehicle, vehicle.id, { status: 'Busy' });
@@ -96,8 +96,12 @@ export class VehicleDriverAssignService {
         'driver_assigns',
         'drivers.id',
         'drivers.driver_name',
+        'drivers.image',
+        'drivers.license_no',
         'vehicles.id',
         'vehicles.vehicle_name',
+        'vehicles.image',
+        'vehicles.license_plate',
         'stations.id',
         'stations.station_name',
       ]);
@@ -164,10 +168,16 @@ export class VehicleDriverAssignService {
       id: assign.id,
       driver_id: assign.driver?.id ?? null,
       driver_name: assign.driver?.driver_name ?? null,
+      driver_image: assign.driver.image,
+      driver_license: assign.driver.license_no,
       vehicle_id: assign.vehicle?.id ?? null,
       vehicle_name: assign.vehicle?.vehicle_name ?? null,
+      vehicle_image: assign.vehicle.image,
+      vehicle_license: assign.vehicle.license_plate,
       station_id: assign.station?.id ?? null,
       station_name: assign.station?.station_name ?? null,
+      createdAt: assign.createdAt,
+      status: assign.status,
     }));
 
     return {
@@ -261,8 +271,6 @@ export class VehicleDriverAssignService {
         assign.driver = newDriver;
       }
 
-      // --- Handle Status Change (Manual Override) ---
-      // If the assignment itself is being marked Inactive, free up the resources
       if (dto.status === 'Inactive' && assign.status === 'Active') {
         await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
           status: 'Active',
@@ -308,6 +316,45 @@ export class VehicleDriverAssignService {
 
       await queryRunner.commitTransaction();
       return { success: true, id };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async completeAssignment(id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const assign = await queryRunner.manager.findOne(VehicleDriverAssign, {
+        where: { id },
+        relations: { vehicle: true, driver: true },
+      });
+
+      if (!assign) throw new NotFoundException(`Assignment not found`);
+
+      if (assign.status === 'Completed') {
+        throw new ConflictException('Assignment is already completed');
+      }
+
+      await queryRunner.manager.update(VehicleDriverAssign, id, {
+        status: 'Completed',
+      });
+
+      await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
+        status: 'Active',
+      });
+
+      await queryRunner.manager.update(Driver, assign.driver_id, {
+        status: 'Active',
+      });
+
+      await queryRunner.commitTransaction();
+      return { message: 'Trip completed successfully' };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
