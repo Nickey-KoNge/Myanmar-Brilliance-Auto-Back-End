@@ -4,7 +4,7 @@ import {
   IsOptional,
   IsUUID,
   IsDateString,
-  IsEnum,
+  // IsEnum,
 } from 'class-validator';
 
 export class CreateDriverDto {

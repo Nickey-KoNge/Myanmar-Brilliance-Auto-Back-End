@@ -33,4 +33,20 @@ export class CredentialsController {
     // argument ၂ ခုလုံး ထည့်ပေးလိုက်ပါ
     return this.credentialsService.refreshTokens(userId, body.refresh_token);
   }
+  @Post('restore')
+  @HttpCode(HttpStatus.OK)
+  async restore(@Body() body: { email: string }) {
+    if (!body.email) {
+      throw new Error('Email is required to restore credential');
+    }
+    const restoredCredential = await this.credentialsService.restoreCredential(
+      body.email,
+    );
+
+    return {
+      message: 'Credential restored successfully',
+      credentialId: restoredCredential.id,
+      email: restoredCredential.email,
+    };
+  }
 }
