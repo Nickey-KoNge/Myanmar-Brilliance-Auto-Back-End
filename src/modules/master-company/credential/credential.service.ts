@@ -214,9 +214,33 @@ export class CredentialsService {
       staffName,
     );
 
-    // ၅။ DB ထဲတွင် token အသစ်ကို update လုပ်သည်
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
     return tokens;
+  }
+
+  async restoreCredential(email: string): Promise<Credential> {
+    const credentialRepo = this.dataSource.getRepository(Credential);
+
+    const existing = await credentialRepo.findOne({
+      where: { email },
+      withDeleted: true,
+    });
+
+    if (existing) {
+      if ('deletedAt' in existing) {
+        (existing as Credential & { deletedAt?: Date | null }).deletedAt = null;
+        return await credentialRepo.save(existing);
+      }
+      return existing;
+    }
+
+    const hashedPassword = await bcrypt.hash('123456', 10);
+    const newCredential = credentialRepo.create({
+      email,
+      password: hashedPassword,
+    });
+
+    return await credentialRepo.save(newCredential);
   }
 }

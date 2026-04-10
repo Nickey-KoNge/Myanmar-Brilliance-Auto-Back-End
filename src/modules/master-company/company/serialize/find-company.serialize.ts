@@ -57,4 +57,13 @@ export class FindCompanySerialize {
 
   @Expose()
   reg_exp_date!: string;
+
+  @Expose()
+  activeCount!: number;
+
+  @Expose()
+  inactiveCount!: number;
+
+  @Expose()
+  lastEditedBy!: string;
 }

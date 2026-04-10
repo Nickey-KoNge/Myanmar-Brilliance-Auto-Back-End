@@ -40,7 +40,6 @@ export class MasterCompanyBranchesController {
     @Body() dto: CreateBranchesDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    // return await this.service.create(dto);
     const userId =
       req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
     return await this.service.create(dto, userId);

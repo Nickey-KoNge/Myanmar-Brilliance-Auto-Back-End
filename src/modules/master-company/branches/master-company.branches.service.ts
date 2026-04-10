@@ -14,6 +14,7 @@ import { UpdateBranchesDto } from './dtos/update-branches.dto';
 import { OpService } from '../../../common/service/op.service';
 import { PaginateBranchesDto } from './dtos/paginate-branches.dto';
 import { MasterAuditService } from 'src/modules/master-audit/audit/audit.service';
+import { getChanges } from '../../../common/utils/object.util';
 
 @Injectable()
 export class MasterCompanyBranchesService {
@@ -24,25 +25,8 @@ export class MasterCompanyBranchesService {
     private readonly branchesRepository: Repository<Branches>,
     private readonly auditService: MasterAuditService,
   ) {}
-  private getChanges(
-    oldObj: Record<string, unknown>,
-    newObj: Record<string, unknown>,
-  ): { oldVals: Record<string, unknown>; newVals: Record<string, unknown> } {
-    const oldVals: Record<string, unknown> = {};
-    const newVals: Record<string, unknown> = {};
-
-    Object.keys(newObj).forEach((key) => {
-      if (oldObj[key] !== newObj[key] && newObj[key] !== undefined) {
-        oldVals[key] = oldObj[key];
-        newVals[key] = newObj[key];
-      }
-    });
-
-    return { oldVals, newVals };
-  }
 
   async create(dto: CreateBranchesDto, userId: string): Promise<Branches> {
-    // return await this.opService.create<Branches>(this.branchesRepository, dto);
     const newBranch = await this.opService.create<Branches>(
       this.branchesRepository,
       dto,
@@ -136,11 +120,33 @@ export class MasterCompanyBranchesService {
     const hasFilters = !!(search || startDate || endDate || companyId);
     const total = await this.getOptimizedCount(queryBuilder, hasFilters);
 
+    //active and inactive count
+    const activeCount = await this.branchesRepository.count({
+      where: { status: 'Active' },
+    });
+    const inactiveCount = total - activeCount > 0 ? total - activeCount : 0;
+
+    let lastEditedBy = 'Unknown';
+    try {
+      const lastAudit = await this.branchesRepository.query<
+        { performed_by: string }[]
+      >(
+        `SELECT performed_by FROM master_audit.audit WHERE entity_name = 'branches' ORDER BY created_at DESC LIMIT 1`,
+      );
+      if (lastAudit && lastAudit.length > 0) {
+        lastEditedBy = lastAudit[0].performed_by;
+      }
+    } catch (error) {
+      console.log('Error fetching last audit:', error);
+    }
     return {
       data,
       total,
       totalPages: Math.ceil(total / limit) || 1,
       currentPage: page,
+      activeCount,
+      inactiveCount,
+      lastEditedBy,
     };
   }
   private async getOptimizedCount(
@@ -202,7 +208,7 @@ export class MasterCompanyBranchesService {
       dto,
     );
 
-    const { oldVals, newVals } = this.getChanges(
+    const { oldVals, newVals } = getChanges(
       oldBranch as unknown as Record<string, unknown>,
       dto as unknown as Record<string, unknown>,
     );

@@ -6,6 +6,8 @@ import { UpdateStationsDto } from "./dtos/update-stations.dto";
 import { OpService } from "../../../common/service/op.service";
 import { PaginateStationsDto } from "./dtos/paginate-station.dto";
 import { Injectable } from "@nestjs/common";
+import { MasterAuditService } from "src/modules/master-audit/audit/audit.service";
+import { before } from "node:test";
 
 @Injectable()
 export class MasterCompanyStationsService{
@@ -14,10 +16,39 @@ export class MasterCompanyStationsService{
 
         @InjectRepository(Stations)
         private readonly stationsRespository:Repository<Stations>,
+        private readonly auditService: MasterAuditService,
     ){}
 
-    async create(dto:CreateStationsDto):Promise<Stations>{
-        return await this.opService.create<Stations>(this.stationsRespository,dto);
+    private getChanges(
+        oldObj: Record<string, unknown>,
+        newObj: Record<string, unknown>,
+    ): { oldVals: Record<string, unknown>; newVals: Record<string, unknown> } {
+        const oldVals: Record<string, unknown> = {};
+        const newVals: Record<string, unknown> = {};
+
+        for (const key in newObj) {
+            if (oldObj[key] !== newObj[key]) {
+                oldVals[key] = oldObj[key];
+                newVals[key] = newObj[key];
+            }
+        }
+
+        return { oldVals, newVals };
+    }
+
+    async create(dto:CreateStationsDto, userId: string):Promise<Stations>{
+        const newStation = await this.opService.create<Stations>(this.stationsRespository,dto);
+
+        await this.auditService.logAction(
+            'stations',
+            newStation.id,
+            'CREATE',
+            null,
+            { ...dto },
+            userId,
+        );
+
+        return newStation;
     }
 
  
@@ -173,17 +204,47 @@ export class MasterCompanyStationsService{
     }
 
 
-    async update(id:string,dto:UpdateStationsDto):Promise<Stations>{
-        return await this.opService.update<Stations>(this.stationsRespository,id,dto);
+    async update(id:string,dto:UpdateStationsDto,userId:string):Promise<Stations>{
+        const oldStation=await this.findOne(id);
+        const updatedStation=await this.opService.update<Stations>(this.stationsRespository,id,dto);
+        
+
+        const {oldVals,newVals}=this.getChanges(
+            oldStation as unknown as Record<string,unknown>,
+            dto as unknown as Record<string,unknown>,
+        );
+
+        if(Object.keys(newVals).length > 0){
+            await this.auditService.logAction(
+                'stations',
+                id,
+                'UPDATE',
+                oldVals,
+                newVals,
+                userId,
+            );
+        }
+
+
+        return updatedStation;
     }
 
 
 
 
-    async remove(id:string):Promise<{id:string}>{
-        await this.findOne(id);
+    async remove(id:string,userId:string):Promise<{id:string}>{
+        const stationToDelete=await this.findOne(id);
+
         try{
             await this.opService.remove<Stations>(this.stationsRespository,id);
+            await this.auditService.logAction(
+                'stations',
+                id,
+                'DELETE',
+                { ...stationToDelete },
+                null,
+                userId,
+            );
             return {id};
         }catch(error:unknown){
             if(
@@ -198,6 +259,80 @@ export class MasterCompanyStationsService{
         }
 
     }
+
+
+
+    // async restoreStation(auditId:string,userId:string):Promise<Stations>{
+    //     const auditRecord=await this.auditService.findOne(auditId);
+
+    //     if(auditRecord.entity_name !=='stations'){
+    //         throw new Error('Invalid audit record for station restoration');
+    //     }
+
+
+
+    //     const rawOldValues=(
+    //         typeof auditRecord.old_values === 'string'
+    //         ? JSON.parse(auditRecord.old_values)
+    //         : auditRecord.old_values
+    //     ) as Record<string,unknown> | null;
+
+
+    //     if(!rawOldValues){
+    //         throw new Error('No old data available to restore from this action');
+    //     }
+
+    //     const safeDataToRestore= JSON.parse(JSON.stringify(rawOldValues)) as Record<string,unknown>;
+    //     delete safeDataToRestore['deleted_at'];
+    //     delete safeDataToRestore['created_at'];
+
+
+    //     const exitingStation=await this.stationsRespository.findOne({
+    //         where:{id:auditRecord.entity_id},
+    //         withDeleted:true,
+    //     });
+
+
+    //     let restored: Stations;
+
+
+    //     const toPlainObject=(data:unknown):Record<string,unknown>=>{
+    //         return JSON.parse(JSON.stringify(data)) as Record<string,unknown>;
+    //     };
+
+
+    //     const beforeState= exitingStation !=null ? toPlainObject(exitingStation) : {status:'Permanently Deleted / Not Exists'};
+
+
+    //     if(exitingStation){
+    //         Object.assign(exitingStation,safeDataToRestore);
+
+    //         if(exitingStation.deleted_at){
+    //             restored=await this.stationsRespository.save(exitingStation);
+    //         }else{
+    //             restored=await this.stationsRespository.save(exitingStation);
+    //         }
+    //     }else{
+    //          const newStation=this.stationsRespository.create(safeDataToRestore);
+    //             restored=await this.stationsRespository.save(newStation);
+    //     }
+    //     const afterState={
+    //         id:restored.id,
+    //         ...safeDataToRestore,
+    //     }
+
+
+    //     await this.auditService.logAction(
+    //         'stations',
+    //         restored.id,
+    //         'RESTORE',
+    //         beforeState,
+    //         afterState,
+    //         userId,
+    //     );
+
+    //     return restored;
+    // }
 
 
 }

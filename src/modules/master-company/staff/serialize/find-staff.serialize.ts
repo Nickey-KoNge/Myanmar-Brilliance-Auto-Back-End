@@ -68,4 +68,13 @@ export class FindStaffSerialize {
     { toClassOnly: true },
   )
   fullAddress!: string;
+
+  @Expose()
+  activeCount!: number;
+
+  @Expose()
+  inactiveCount!: number;
+
+  @Expose()
+  lastEditedBy!: string;
 }
