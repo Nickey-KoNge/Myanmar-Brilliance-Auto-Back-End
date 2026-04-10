@@ -26,6 +26,7 @@ export class GroupController {
 
   @Get('list')
   findAll(@Query() query: any) {
+    console.log("reach here");
     return this.service.findAll(query);
   }
 
