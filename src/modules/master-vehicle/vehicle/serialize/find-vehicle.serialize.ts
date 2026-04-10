@@ -29,8 +29,8 @@ export class FindVehicleSerialize {
   @Expose()
   vehicle_model_id!: string;
 
-
-
+  @Expose()
+  current_odometer!: string;
 
   @Expose()
   vehicle_model_name!: string;
