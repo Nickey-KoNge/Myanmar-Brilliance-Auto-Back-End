@@ -14,7 +14,12 @@ import { IFileService } from 'src/common/service/i-file.service';
 import { OptimizeImageService } from 'src/common/service/optimize-image.service';
 import { OpService } from 'src/common/service/op.service';
 import { PaginateStaffDto } from './dto/paginate-staff.dto';
-
+import { MasterAuditService } from 'src/modules/master-audit/audit/audit.service';
+import { getChanges } from '../../../common/utils/object.util';
+import 'multer';
+import { Company } from '../company/entities/company.entity';
+import { Role } from 'src/modules/master-service/role/entities/role.entity';
+import { Branches } from '../branches/entities/branches.entity';
 @Injectable()
 export class StaffService {
   constructor(
@@ -27,10 +32,12 @@ export class StaffService {
     private readonly fileService: IFileService,
     private readonly opService: OpService,
     private readonly optimizeImageService: OptimizeImageService,
+    private readonly auditService: MasterAuditService,
   ) {}
 
   async create(
     createStaffDto: CreateStaffDto,
+    userId: string,
     file: Express.Multer.File,
   ): Promise<Staff> {
     const { email, password, company, branch, role, ...staffData } =
@@ -69,6 +76,14 @@ export class StaffService {
       const savedStaff = await queryRunner.manager.save(staff);
 
       await queryRunner.commitTransaction();
+      await this.auditService.logAction(
+        'staff',
+        staff.id,
+        'CREATE',
+        null,
+        { ...createStaffDto },
+        userId,
+      );
       return savedStaff;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -85,6 +100,7 @@ export class StaffService {
       await queryRunner.release();
     }
   }
+
   async findAll(query: PaginateStaffDto) {
     const {
       page,
@@ -190,13 +206,37 @@ export class StaffService {
     const hasFilters = !!(search || startDate || endDate || companyId);
     const total = await this.getOptimizedCount(queryBuilder, hasFilters);
 
+    //active and inactive count
+    const activeCount = await this.staffRepository.count({
+      where: { status: 'Active' },
+    });
+    const inactiveCount = total - activeCount > 0 ? total - activeCount : 0;
+
+    let lastEditedBy = 'Unknown';
+    try {
+      const lastAudit = await this.staffRepository.query<
+        { performed_by: string }[]
+      >(
+        `SELECT performed_by FROM master_audit.audit WHERE entity_name = 'staff' ORDER BY created_at DESC LIMIT 1`,
+      );
+      if (lastAudit && lastAudit.length > 0) {
+        lastEditedBy = lastAudit[0].performed_by;
+      }
+    } catch (error) {
+      console.log('Error fetching last audit:', error);
+    }
+
     return {
       data,
       total,
       totalPages: Math.ceil(total / limit) || 1,
       currentPage: page,
+      activeCount,
+      inactiveCount,
+      lastEditedBy,
     };
   }
+
   private async getOptimizedCount(
     queryBuilder: SelectQueryBuilder<Staff>,
     hasFilters: boolean,
@@ -270,15 +310,26 @@ export class StaffService {
   async update(
     id: string,
     updateStaffDto: UpdateStaffDto,
+    userId: string,
     file?: Express.Multer.File,
   ): Promise<Staff> {
     const staff = await this.staffRepository.findOne({
       where: { id },
       relations: ['credential', 'company', 'branch', 'role'],
     });
+
     if (!staff) {
       throw new NotFoundException('Staff not found');
     }
+
+    const oldState: Record<string, unknown> = {
+      ...staff,
+      email: staff.credential?.email || null,
+      company: staff.company?.id || null,
+      branch: staff.branch?.id || null,
+      role: staff.role?.id || null,
+    };
+    delete oldState.credential;
 
     const { email, password, company, branch, role, ...staffData } =
       updateStaffDto;
@@ -290,47 +341,88 @@ export class StaffService {
         password,
       );
     }
+
     Object.assign(staff, staffData);
 
-    if (company) {
-      staff.company = { id: company } as Staff['company'];
-    }
+    if (company !== undefined)
+      staff.company = (company ? { id: company } : null) as unknown as Company;
+    if (branch !== undefined)
+      staff.branch = (branch ? { id: branch } : null) as unknown as Branches;
+    if (role !== undefined)
+      staff.role = (role ? { id: role } : null) as unknown as Role;
 
-    if (branch) {
-      staff.branch = { id: branch } as Staff['branch'];
-    }
+    const newState: Record<string, unknown> = { ...updateStaffDto };
 
-    if (role) {
-      staff.role = { id: role } as Staff['role'];
-    }
+    let oldImageToDelete: string | null = null;
 
     if (file) {
       if (staff.image) {
-        await this.fileService.deleteFile(staff.image);
+        oldImageToDelete = staff.image;
       }
-
       const optimizedFile = await this.optimizeImageService.optimizeImage(file);
       staff.image = await this.fileService.uploadFile(optimizedFile, 'staff');
+      newState.image = staff.image;
     }
-    await this.opService.update<Staff>(this.staffRepository, id, staff);
 
-    return await this.findOne(id);
+    const updatedStaff = await this.opService.update<Staff>(
+      this.staffRepository,
+      id,
+      staff,
+    );
+
+    if (oldImageToDelete) {
+      await this.fileService.deleteFile(oldImageToDelete).catch((err) => {
+        console.warn(`Failed to delete old staff image:`, err);
+      });
+    }
+
+    const cleanOldState = JSON.parse(JSON.stringify(oldState)) as Record<
+      string,
+      unknown
+    >;
+    const cleanNewState = JSON.parse(JSON.stringify(newState)) as Record<
+      string,
+      unknown
+    >;
+
+    const { oldVals, newVals } = getChanges(cleanOldState, cleanNewState);
+
+    if (newVals.password) {
+      newVals.password = '***CHANGED***';
+    }
+
+    if (Object.keys(newVals).length > 0) {
+      await this.auditService.logAction(
+        'staff',
+        id,
+        'UPDATE',
+        oldVals,
+        newVals,
+        userId,
+      );
+    }
+
+    return updatedStaff;
   }
-
-  async remove(id: string): Promise<Staff> {
+  async remove(id: string, userId: string): Promise<Staff> {
     const staff = await this.staffRepository.findOne({
       where: { id },
-      relations: ['credential'],
+      relations: ['credential', 'company', 'branch', 'role'],
     });
 
     if (!staff) {
       throw new NotFoundException('Staff not found');
     }
 
-    if (staff.image) {
-      await this.fileService.deleteFile(staff.image);
-    }
-
+    const oldState: Record<string, unknown> = {
+      ...staff,
+      email: staff.credential?.email || null,
+      company: staff.company?.id || null,
+      branch: staff.branch?.id || null,
+      role: staff.role?.id || null,
+      credential: staff.credential?.id || null,
+    };
+    delete oldState.credential;
     const credentialId = staff.credential?.id;
 
     const deletedStaff = await this.opService.remove<Staff>(
@@ -341,6 +433,267 @@ export class StaffService {
     if (credentialId) {
       await this.credentialService.deleteCredential(credentialId);
     }
+    if (staff.image) {
+      await this.fileService.deleteFile(staff.image).catch((err) => {
+        console.warn(`Failed to delete staff image:`, err);
+      });
+    }
+    const cleanOldState = JSON.parse(JSON.stringify(oldState)) as Record<
+      string,
+      unknown
+    >;
+    await this.auditService.logAction(
+      'staff',
+      id,
+      'DELETE',
+      cleanOldState,
+      null,
+      userId,
+    );
     return deletedStaff;
+  }
+  // async restoreStaff(auditId: string, userId: string): Promise<Staff> {
+  //   const auditRecord = await this.auditService.findOne(auditId);
+
+  //   if (auditRecord.entity_name !== 'staff') {
+  //     throw new BadRequestException('This audit record is not for staff');
+  //   }
+
+  //   const rawOldValues = (
+  //     typeof auditRecord.old_values === 'string'
+  //       ? JSON.parse(auditRecord.old_values)
+  //       : auditRecord.old_values
+  //   ) as Record<string, unknown> | null;
+
+  //   if (!rawOldValues || Object.keys(rawOldValues).length === 0) {
+  //     throw new BadRequestException(
+  //       'No old data available to restore from this action',
+  //     );
+  //   }
+
+  //   const dataToRestore = JSON.parse(JSON.stringify(rawOldValues)) as Record<
+  //     string,
+  //     any
+  //   >;
+  //   delete dataToRestore['deleted_at'];
+  //   delete dataToRestore['deletedAt'];
+  //   delete dataToRestore['updated_at'];
+  //   delete dataToRestore['updatedAt'];
+
+  //   const relationKeys = ['company', 'branch', 'role'];
+  //   relationKeys.forEach((key) => {
+  //     if (
+  //       dataToRestore[key] !== undefined &&
+  //       typeof dataToRestore[key] === 'string'
+  //     ) {
+  //       dataToRestore[key] = { id: dataToRestore[key] } as unknown;
+  //     }
+  //   });
+
+  //   const existingStaff = await this.staffRepository.findOne({
+  //     where: { id: auditRecord.entity_id },
+  //     withDeleted: true,
+  //     relations: ['credential'],
+  //   });
+  //   const toPlainObject = (data: unknown): Record<string, unknown> => {
+  //     return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+  //   };
+
+  //   const beforeState =
+  //     existingStaff !== null
+  //       ? toPlainObject(existingStaff)
+  //       : { status: 'Permanently Deleted / Not Exists' };
+
+  //   let restoredStaff: Staff;
+
+  //   try {
+  //     let recoveredCredentialId: string | null = null;
+
+  //     const staffEmail =
+  //       (dataToRestore['email'] as string | undefined) ||
+  //       `restored_${Date.now()}@example.com`;
+
+  //     const credService = this.credentialService as unknown as Record<
+  //       string,
+  //       (email: string) => Promise<{ id: string }>
+  //     >;
+
+  //     if (typeof credService['restoreCredential'] === 'function') {
+  //       const recoveredCred =
+  //         await credService['restoreCredential'](staffEmail);
+  //       recoveredCredentialId = recoveredCred.id;
+  //     }
+
+  //     if (recoveredCredentialId) {
+  //       dataToRestore['credential'] = { id: recoveredCredentialId } as unknown;
+  //     }
+
+  //     if (existingStaff) {
+  //       if ('deletedAt' in existingStaff) {
+  //         (existingStaff as Staff & { deletedAt?: Date | null }).deletedAt =
+  //           null;
+  //       }
+
+  //       this.staffRepository.merge(existingStaff, dataToRestore);
+  //       restoredStaff = await this.staffRepository.save(existingStaff);
+  //     } else {
+  //       const newStaff = this.staffRepository.create(dataToRestore);
+  //       newStaff.id = auditRecord.entity_id;
+  //       restoredStaff = await this.staffRepository.save(newStaff);
+  //     }
+  //     const afterState = {
+  //       id: restoredStaff.id,
+  //       ...dataToRestore,
+  //     };
+
+  //     await this.auditService.logAction(
+  //       'staff',
+  //       restoredStaff.id,
+  //       'RESTORE',
+  //       beforeState,
+  //       afterState,
+  //       userId,
+  //     );
+
+  //     return restoredStaff;
+  //   } catch (error: unknown) {
+  //     if (
+  //       typeof error === 'object' &&
+  //       error !== null &&
+  //       'code' in error &&
+  //       (error as Record<string, unknown>).code === '23503'
+  //     ) {
+  //       throw new BadRequestException(
+  //         'Cannot restore staff because the associated Company, Branch, or Role has been permanently deleted.',
+  //       );
+  //     }
+  //     throw error;
+  //   }
+  // }
+  async restoreStaff(auditId: string, userId: string): Promise<Staff> {
+    const auditRecord = await this.auditService.findOne(auditId);
+
+    if (auditRecord.entity_name !== 'staff') {
+      throw new BadRequestException('This audit record is not for staff');
+    }
+
+    const rawOldValues = (
+      typeof auditRecord.old_values === 'string'
+        ? JSON.parse(auditRecord.old_values)
+        : auditRecord.old_values
+    ) as Record<string, unknown> | null;
+
+    if (!rawOldValues || Object.keys(rawOldValues).length === 0) {
+      throw new BadRequestException(
+        'No old data available to restore from this action',
+      );
+    }
+
+    const dataToRestore = JSON.parse(JSON.stringify(rawOldValues)) as Record<
+      string,
+      unknown
+    >;
+    delete dataToRestore['deleted_at'];
+    delete dataToRestore['deletedAt'];
+    delete dataToRestore['updated_at'];
+    delete dataToRestore['updatedAt'];
+
+    const relationKeys = ['company', 'branch', 'role'];
+    relationKeys.forEach((key) => {
+      if (
+        dataToRestore[key] !== undefined &&
+        typeof dataToRestore[key] === 'string'
+      ) {
+        dataToRestore[key] = { id: dataToRestore[key] } as unknown;
+      }
+    });
+
+    const existingStaff = await this.staffRepository.findOne({
+      where: { id: auditRecord.entity_id },
+      withDeleted: true,
+      relations: ['credential'],
+    });
+
+    const toPlainObject = (data: unknown): Record<string, unknown> => {
+      return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+    };
+
+    const beforeState =
+      existingStaff !== null
+        ? toPlainObject(existingStaff)
+        : { status: 'Permanently Deleted / Not Exists' };
+
+    let restoredStaff: Staff;
+
+    try {
+      if (auditRecord.action === 'DELETE') {
+        const staffEmail = dataToRestore['email'] as string | undefined;
+
+        if (staffEmail) {
+          const credService = this.credentialService as unknown as Record<
+            string,
+            (email: string) => Promise<{ id: string }>
+          >;
+          if (typeof credService.restoreCredential === 'function') {
+            const recoveredCred =
+              await credService.restoreCredential(staffEmail);
+            dataToRestore['credential'] = { id: recoveredCred.id } as unknown;
+          }
+        }
+        delete dataToRestore['email'];
+      } else if (auditRecord.action === 'UPDATE') {
+        // UPDATE ကို Undo လုပ်သည့်အခါ Email ပြောင်းခဲ့လျှင် Credential တွင်ပါ လိုက်ပြင်ပေးသည်
+        if (dataToRestore['email'] !== undefined && existingStaff?.credential) {
+          await this.credentialService.updateCredential(
+            existingStaff.credential.id,
+            dataToRestore['email'] as string,
+          );
+        }
+        delete dataToRestore['email'];
+        delete dataToRestore['credential'];
+      }
+
+      if (existingStaff) {
+        if ('deletedAt' in existingStaff) {
+          (existingStaff as Staff & { deletedAt?: Date | null }).deletedAt =
+            null;
+        }
+
+        this.staffRepository.merge(existingStaff, dataToRestore);
+        restoredStaff = await this.staffRepository.save(existingStaff);
+      } else {
+        const newStaff = this.staffRepository.create(dataToRestore);
+        newStaff.id = auditRecord.entity_id;
+        restoredStaff = await this.staffRepository.save(newStaff);
+      }
+
+      const afterState = {
+        id: restoredStaff.id,
+        ...dataToRestore,
+      };
+
+      await this.auditService.logAction(
+        'staff',
+        restoredStaff.id,
+        'RESTORE',
+        beforeState,
+        afterState,
+        userId,
+      );
+
+      return restoredStaff;
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as Record<string, unknown>).code === '23503'
+      ) {
+        throw new BadRequestException(
+          'Cannot restore staff because the associated Company, Branch, or Role has been permanently deleted.',
+        );
+      }
+      throw error;
+    }
   }
 }

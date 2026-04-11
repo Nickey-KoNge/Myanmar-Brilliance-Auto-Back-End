@@ -2,10 +2,10 @@ import { Expose, Transform } from 'class-transformer';
 
 export class FindDriverSerialize {
   @Expose()
-  id: string;
+  id!: string;
 
   @Expose()
-  status: string;
+  status!: string;
 
   @Expose()
   @Transform(
@@ -23,5 +23,5 @@ export class FindDriverSerialize {
     },
     { toClassOnly: true },
   )
-  fullAddress: string;
+  fullAddress!: string;
 }

@@ -13,6 +13,8 @@ import { CreateBranchesDto } from './dtos/create-branches.dto';
 import { UpdateBranchesDto } from './dtos/update-branches.dto';
 import { OpService } from '../../../common/service/op.service';
 import { PaginateBranchesDto } from './dtos/paginate-branches.dto';
+import { MasterAuditService } from 'src/modules/master-audit/audit/audit.service';
+import { getChanges } from '../../../common/utils/object.util';
 
 @Injectable()
 export class MasterCompanyBranchesService {
@@ -21,10 +23,25 @@ export class MasterCompanyBranchesService {
 
     @InjectRepository(Branches)
     private readonly branchesRepository: Repository<Branches>,
+    private readonly auditService: MasterAuditService,
   ) {}
 
-  async create(dto: CreateBranchesDto): Promise<Branches> {
-    return await this.opService.create<Branches>(this.branchesRepository, dto);
+  async create(dto: CreateBranchesDto, userId: string): Promise<Branches> {
+    const newBranch = await this.opService.create<Branches>(
+      this.branchesRepository,
+      dto,
+    );
+
+    await this.auditService.logAction(
+      'branches',
+      newBranch.id,
+      'CREATE',
+      null,
+      { ...dto },
+      userId,
+    );
+
+    return newBranch;
   }
 
   async findAll(query: PaginateBranchesDto) {
@@ -103,11 +120,33 @@ export class MasterCompanyBranchesService {
     const hasFilters = !!(search || startDate || endDate || companyId);
     const total = await this.getOptimizedCount(queryBuilder, hasFilters);
 
+    //active and inactive count
+    const activeCount = await this.branchesRepository.count({
+      where: { status: 'Active' },
+    });
+    const inactiveCount = total - activeCount > 0 ? total - activeCount : 0;
+
+    let lastEditedBy = 'Unknown';
+    try {
+      const lastAudit = await this.branchesRepository.query<
+        { performed_by: string }[]
+      >(
+        `SELECT performed_by FROM master_audit.audit WHERE entity_name = 'branches' ORDER BY created_at DESC LIMIT 1`,
+      );
+      if (lastAudit && lastAudit.length > 0) {
+        lastEditedBy = lastAudit[0].performed_by;
+      }
+    } catch (error) {
+      console.log('Error fetching last audit:', error);
+    }
     return {
       data,
       total,
       totalPages: Math.ceil(total / limit) || 1,
       currentPage: page,
+      activeCount,
+      inactiveCount,
+      lastEditedBy,
     };
   }
   private async getOptimizedCount(
@@ -124,7 +163,7 @@ export class MasterCompanyBranchesService {
       >(
         `SELECT reltuples::bigint AS estimate FROM pg_class c 
          JOIN pg_namespace n ON n.oid = c.relnamespace 
-         WHERE n.nspname = 'master_company' AND c.relname = 'branches'`, // Schema name ကို သတိထားပါ
+         WHERE n.nspname = 'master_company' AND c.relname = 'branches'`,
       );
 
       const estimate = result?.[0]?.estimate ? Number(result[0].estimate) : 0;
@@ -147,7 +186,7 @@ export class MasterCompanyBranchesService {
         address: true,
         division: true,
         status: true,
-        company: { id: true },
+        company: { id: true, company_name: true },
       },
     });
 
@@ -157,19 +196,50 @@ export class MasterCompanyBranchesService {
     return branch;
   }
 
-  async update(id: string, dto: UpdateBranchesDto): Promise<Branches> {
-    return await this.opService.update<Branches>(
+  async update(
+    id: string,
+    dto: UpdateBranchesDto,
+    userId: string,
+  ): Promise<Branches> {
+    const oldBranch = await this.findOne(id);
+    const updatedBranch = await this.opService.update<Branches>(
       this.branchesRepository,
       id,
       dto,
     );
-  }
 
-  async remove(id: string): Promise<{ id: string }> {
-    await this.findOne(id);
+    const { oldVals, newVals } = getChanges(
+      oldBranch as unknown as Record<string, unknown>,
+      dto as unknown as Record<string, unknown>,
+    );
+
+    if (Object.keys(newVals).length > 0) {
+      await this.auditService.logAction(
+        'branches',
+        id,
+        'UPDATE',
+        oldVals,
+        newVals,
+        userId,
+      );
+    }
+
+    return updatedBranch;
+  }
+  async remove(id: string, userId: string): Promise<{ id: string }> {
+    const branchToDelete = await this.findOne(id);
 
     try {
       await this.opService.remove<Branches>(this.branchesRepository, id);
+
+      await this.auditService.logAction(
+        'branches',
+        id,
+        'DELETE',
+        { ...branchToDelete },
+        null,
+        userId,
+      );
 
       return { id };
     } catch (error: unknown) {
@@ -183,8 +253,79 @@ export class MasterCompanyBranchesService {
           'Cannot delete this branch because it contains active staff or stations. Please remove or reassign them first.',
         );
       }
-
       throw error;
     }
+  }
+  async restoreBranch(auditId: string, userId: string): Promise<Branches> {
+    const auditRecord = await this.auditService.findOne(auditId);
+
+    if (auditRecord.entity_name !== 'branches') {
+      throw new BadRequestException('This audit record is not for branches');
+    }
+
+    const rawOldValues = (
+      typeof auditRecord.old_values === 'string'
+        ? JSON.parse(auditRecord.old_values)
+        : auditRecord.old_values
+    ) as Record<string, unknown> | null;
+
+    if (!rawOldValues) {
+      throw new BadRequestException(
+        'No old data available to restore from this action',
+      );
+    }
+
+    const safeDataToRestore = JSON.parse(
+      JSON.stringify(rawOldValues),
+    ) as Record<string, unknown>;
+    delete safeDataToRestore['deleted_at'];
+    delete safeDataToRestore['updated_at'];
+
+    const existingBranch = await this.branchesRepository.findOne({
+      where: { id: auditRecord.entity_id },
+      withDeleted: true,
+    });
+
+    let restored: Branches;
+
+    const toPlainObject = (data: unknown): Record<string, unknown> => {
+      return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+    };
+
+    // BEFORE STATE
+    const beforeState =
+      existingBranch !== null
+        ? toPlainObject(existingBranch)
+        : { status: 'Permanently Deleted / Not Exists' };
+
+    if (existingBranch) {
+      Object.assign(existingBranch, safeDataToRestore);
+
+      if (existingBranch.deleted_at) {
+        restored = await this.branchesRepository.recover(existingBranch);
+      } else {
+        restored = await this.branchesRepository.save(existingBranch);
+      }
+    } else {
+      const newBranch = this.branchesRepository.create(safeDataToRestore);
+      restored = await this.branchesRepository.save(newBranch);
+    }
+
+    const afterState = {
+      id: restored.id,
+      ...safeDataToRestore,
+    };
+
+    // AUDIT LOG
+    await this.auditService.logAction(
+      'branches',
+      restored.id,
+      'RESTORE',
+      beforeState,
+      afterState,
+      userId,
+    );
+
+    return restored;
   }
 }

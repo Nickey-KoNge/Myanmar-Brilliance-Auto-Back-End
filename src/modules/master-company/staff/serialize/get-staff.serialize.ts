@@ -2,16 +2,16 @@ import { Expose, Transform } from 'class-transformer';
 
 export class GetStaffSerialize {
   @Expose()
-  id: string;
+  id!: string;
 
   @Expose()
-  staffName: string;
+  staffName!: string;
 
   @Expose()
-  phone: string;
+  phone!: string;
 
   @Expose()
-  position: string;
+  position!: string;
 
   // --- Credential ---
   @Expose()
@@ -19,74 +19,74 @@ export class GetStaffSerialize {
     const staff = obj as { credential?: { email: string; id: string } };
     return staff.credential?.email || null;
   })
-  email: string;
+  email!: string;
 
   @Expose()
-  status: string;
+  status!: string;
 
   @Expose()
   @Transform(({ obj }: { obj: any }) => {
     const staff = obj as { credential?: { id: string } };
     return staff.credential?.id || null;
   })
-  credential_id: string;
+  credential_id!: string;
   // --- Role ---
   @Expose()
   @Transform(({ obj }: { obj: { role?: { id: string } } }) => {
     return obj.role?.id || null;
   })
-  role_id: string;
+  role_id!: string;
 
   @Expose()
   @Transform(({ obj }: { obj: { role?: { role_name: string } } }) => {
     return obj.role?.role_name || null;
   })
-  role_name: string;
+  role_name!: string;
 
   // --- Company ---
   @Expose()
   @Transform(({ obj }: { obj: { company?: { id: string } } }) => {
     return obj.company?.id || null;
   })
-  company_id: string;
+  company_id!: string;
 
   @Expose()
   @Transform(({ obj }: { obj: { company?: { company_name: string } } }) => {
     return obj.company?.company_name || null;
   })
-  company_name: string;
+  company_name!: string;
 
   // --- Branch ---
   @Expose()
   @Transform(({ obj }: { obj: { branch?: { id: string } } }) => {
     return obj.branch?.id || null;
   })
-  branch_id: string;
+  branch_id!: string;
 
   @Expose()
   @Transform(({ obj }: { obj: { branch?: { branches_name: string } } }) => {
     return obj.branch?.branches_name || null;
   })
-  branch_name: string;
+  branch_name!: string;
 
   @Expose()
-  street_address: string;
+  street_address!: string;
 
   @Expose()
-  city: string;
+  city!: string;
 
   @Expose()
-  country: string;
+  country!: string;
 
   @Expose()
-  dob: string;
+  dob!: string;
 
   @Expose()
-  nrc: string;
+  nrc!: string;
 
   @Expose()
-  gender: string;
+  gender!: string;
 
   @Expose()
-  image: string;
+  image!: string;
 }

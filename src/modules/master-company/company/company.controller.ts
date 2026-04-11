@@ -11,6 +11,7 @@ import {
   UploadedFile,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CompanyService } from './company.service';
@@ -24,6 +25,14 @@ import { PaginateCompanyDto } from './dtos/paginate-company.dto';
 import { Serialize } from 'src/common/interceptors/serialize.interceptor';
 import { GetCompanySerialize } from './serialize/get-company.serialize';
 
+interface AuthenticatedRequest {
+  user?: {
+    sub?: string;
+    id?: string;
+    staffName?: string;
+    email?: string;
+  };
+}
 @Controller('master-company/company')
 @UseGuards(AtGuard)
 export class CompanyController {
@@ -36,11 +45,15 @@ export class CompanyController {
   }
   @Post()
   @UseInterceptors(FileInterceptor('image'))
-  create(
+  async create(
     @Body() dto: CreateCompanyDto,
+    @Req() req: AuthenticatedRequest,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.companyService.create(dto, file);
+    // return this.companyService.create(dto, file);
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.companyService.create(dto, userId, file);
   }
   @Get(':id')
   @Serialize(GetCompanySerialize)
@@ -50,16 +63,31 @@ export class CompanyController {
 
   @Patch(':id')
   @UseInterceptors(FileInterceptor('image'))
-  update(
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateCompanyDto,
+    @Req() req: AuthenticatedRequest,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.companyService.update(id, dto, file);
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.companyService.update(id, dto, userId, file);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.companyService.remove(id);
+  async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // return this.companyService.remove(id);
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.companyService.remove(id, userId);
+  }
+  @Post('restore/:auditId')
+  async restore(
+    @Param('auditId') auditId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.companyService.restoreCompany(auditId, userId);
   }
 }

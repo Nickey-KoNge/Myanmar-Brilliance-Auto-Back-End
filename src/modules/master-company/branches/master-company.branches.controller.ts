@@ -9,6 +9,7 @@ import {
   Param,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { CreateBranchesDto } from './dtos/create-branches.dto';
 import { MasterCompanyBranchesService } from './master-company.branches.service';
@@ -21,14 +22,27 @@ import { GetBranchesSerialize } from './serialize/get-branches.serialize';
 import { Serialize } from 'src/common/interceptors/serialize.interceptor';
 import { AtGuard } from 'src/common/guards/at.guard';
 
+interface AuthenticatedRequest {
+  user?: {
+    sub?: string;
+    id?: string;
+    staffName?: string;
+    email?: string;
+  };
+}
 @Controller('master-company/branches')
 @UseGuards(AtGuard)
 export class MasterCompanyBranchesController {
   constructor(private readonly service: MasterCompanyBranchesService) {}
 
   @Post()
-  async create(@Body() dto: CreateBranchesDto) {
-    return await this.service.create(dto);
+  async create(
+    @Body() dto: CreateBranchesDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.service.create(dto, userId);
   }
   @Serialize(FindBranchesSerialize)
   @Get()
@@ -43,12 +57,31 @@ export class MasterCompanyBranchesController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateBranchesDto) {
-    return await this.service.update(id, dto);
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateBranchesDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    // return await this.service.update(id, dto);
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.service.update(id, dto, userId);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
-    return await this.service.remove(id);
+  async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // return await this.service.remove(id);
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.service.remove(id, userId);
+  }
+  @Post('restore/:auditId')
+  async restore(
+    @Param('auditId') auditId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.service.restoreBranch(auditId, userId);
   }
 }

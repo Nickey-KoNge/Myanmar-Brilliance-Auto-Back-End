@@ -2,34 +2,34 @@ import { Expose, Transform } from 'class-transformer';
 
 export class FindCompanySerialize {
   @Expose()
-  id: string;
+  id!: string;
 
   @Expose()
-  company_name: string;
+  company_name!: string;
 
   @Expose()
-  reg_number: string;
+  reg_number!: string;
 
   @Expose()
-  phone: string;
+  phone!: string;
 
   @Expose()
-  email: string;
+  email!: string;
 
   @Expose()
-  owner_name: string;
+  owner_name!: string;
 
   @Expose()
-  owner_phone: string;
+  owner_phone!: string;
 
   @Expose()
-  owner_email: string;
+  owner_email!: string;
 
   @Expose()
-  image: string;
+  image!: string;
 
   @Expose()
-  status: string;
+  status!: string;
 
   @Expose()
   @Transform(
@@ -47,14 +47,23 @@ export class FindCompanySerialize {
     },
     { toClassOnly: true },
   )
-  fullAddress: string;
+  fullAddress!: string;
 
   @Expose()
-  website_url: string;
+  website_url!: string;
 
   @Expose()
-  establish_year: string;
+  establish_year!: string;
 
   @Expose()
-  reg_exp_date: string;
+  reg_exp_date!: string;
+
+  @Expose()
+  activeCount!: number;
+
+  @Expose()
+  inactiveCount!: number;
+
+  @Expose()
+  lastEditedBy!: string;
 }

@@ -14,26 +14,26 @@ import { Credential } from './credential.entity';
 @Index(['token', 'revoked'])
 export class RefreshToken {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuid_generate_v7()' })
-  id: string;
+  id!: string;
 
   @Column({ name: 'refresh_token', length: 500 })
   @Index()
-  token: string;
+  token!: string;
 
   @Column({ name: 'expires_at', type: 'timestamp' })
   @Index()
-  expiresAt: Date;
+  expiresAt!: Date;
 
   @Column({ default: false })
   @Index()
-  revoked: boolean;
+  revoked!: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ManyToOne(() => Credential, (cred) => cred.refreshTokens, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'credential_id' })
-  credential: Credential;
+  credential!: Credential;
 }

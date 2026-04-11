@@ -8,9 +8,14 @@ import { CredentialModule } from '../credential/credential.module';
 import { FileServiceProvider } from 'src/common/service/file.service';
 import { OptimizeImageService } from 'src/common/service/optimize-image.service';
 import { AtStrategy } from 'src/common/strategies/at.strategy';
+import { MasterAuditModule } from 'src/modules/master-audit/audit/audit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Staff, Credential]), CredentialModule],
+  imports: [
+    TypeOrmModule.forFeature([Staff, Credential]),
+    CredentialModule,
+    MasterAuditModule,
+  ],
   controllers: [StaffController],
   providers: [
     StaffService,

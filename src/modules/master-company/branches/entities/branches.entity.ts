@@ -20,55 +20,55 @@ export class Branches {
     primary: true,
     default: () => 'uuid_generate_v7()',
   })
-  id: string;
+  id!: string;
 
   @Index()
   @Column({ type: 'varchar', length: 100 })
-  branches_name: string;
+  branches_name!: string;
 
   @Column({ type: 'uuid' })
   @Index()
-  company_id: string;
+  company_id!: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
-  gps_location: string;
+  gps_location!: string;
 
   @Column({ type: 'varchar', length: 20, unique: true })
-  phone: string;
+  phone!: string;
 
   @Column({ type: 'varchar', length: 50 })
-  division: string;
+  division!: string;
 
   @Column({ type: 'varchar', length: 50 })
-  city: string;
+  city!: string;
 
   @Column({ type: 'varchar', length: 100 })
-  address: string;
+  address!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   @Index()
-  description: string;
+  description!: string;
 
   @Column({ type: 'varchar', length: 20, default: 'Active' })
   @Index()
-  status: string;
+  status!: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @DeleteDateColumn()
-  deleted_at: Date;
+  deleted_at!: Date;
 
   @ManyToOne(() => Company, (company) => company.branches)
   @JoinColumn({ name: 'company_id' })
-  company: Company;
+  company!: Company;
 
   @OneToMany(() => Staff, (staff) => staff.branch)
-  staff: Staff[];
+  staff!: Staff[];
 
   @OneToMany(() => Stations, (station) => station.branch)
-  stations: Stations[];
+  stations!: Stations[];
 }

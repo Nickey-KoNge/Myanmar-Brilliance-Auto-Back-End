@@ -12,7 +12,17 @@ import { CompanyModule } from './modules/master-company/company/company.module';
 import { CredentialModule } from './modules/master-company/credential/credential.module';
 import { StaffModule } from './modules/master-company/staff/staff.module';
 import { MasterServiceRoleModule } from './modules/master-service/role/master-service.role.module';
+import { MasterCompanyStationsModule } from './modules/master-company/stations/master-company.stations.module';
 import { DriverModule } from './modules/master-company/driver/driver.module';
+import { VehicleBrandsModule } from './modules/master-vehicle/vehicle-brands/vehicle-brands.module';
+// import { VehicleModelController } from './modules/master-vehicle/vehicle-model/vehicle-model.controller';
+// import { VehicleModelService } from './modules/master-vehicle/vehicle-model/vehicle-model.service';
+import { VehicleModelModule } from './modules/master-vehicle/vehicle-model/vehicle-model.module';
+
+import { MasterVehicleModule } from './modules/master-vehicle/vehicle/master-vehicle.vehicle.module';
+
+import { VehicleDriverAssignModule } from './modules/master-vehicle/driver-assign/vehicle-driver-assign.module';
+import { GroupModule } from './modules/master-company/group/group.module';
 
 @Module({
   imports: [
@@ -28,15 +38,22 @@ import { DriverModule } from './modules/master-company/driver/driver.module';
 
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'public'),
+      renderPath: '/public',
     }),
 
     MasterCompanyBranchesModule,
+    MasterCompanyStationsModule,
     CompanyModule,
     StaffModule,
     CredentialModule,
     CommonModule,
     MasterServiceRoleModule,
     DriverModule,
+    VehicleBrandsModule,
+    VehicleModelModule,
+    MasterVehicleModule,
+    VehicleDriverAssignModule,
+    GroupModule,
   ],
   controllers: [],
   providers: [],

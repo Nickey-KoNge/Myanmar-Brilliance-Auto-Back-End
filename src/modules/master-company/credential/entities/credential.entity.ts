@@ -17,30 +17,30 @@ import { Driver } from '../../driver/entities/driver.entity';
 @Index(['email', 'status'])
 export class Credential {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuid_generate_v7()' })
-  id: string;
+  id!: string;
 
   @Column({ unique: true, length: 100 })
-  email: string;
+  email!: string;
 
   @Column({ select: false }) // Security: hide password from results
-  password: string;
+  password!: string;
 
   @Column({ default: 'Active', length: 20 })
   @Index()
-  status: string;
+  status!: string;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @OneToOne(() => Staff, (staff) => staff.credential)
-  staff: Staff;
+  staff!: Staff;
 
   @OneToOne(() => Driver, (driver) => driver.credential_id)
-  driver: Driver;
+  driver!: Driver;
 
   @OneToMany(() => RefreshToken, (token) => token.credential)
-  refreshTokens: RefreshToken[];
+  refreshTokens!: RefreshToken[];
 }

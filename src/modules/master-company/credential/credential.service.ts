@@ -104,7 +104,7 @@ export class CredentialsService {
     const credentialRepo = this.dataSource.getRepository(Credential);
 
     const result = await credentialRepo.delete(id);
-
+    // const result = await credentialRepo.softDelete(id);
     if (result.affected === 0) {
       throw new NotFoundException('Credential not found');
     }
@@ -121,12 +121,13 @@ export class CredentialsService {
     if (!user || !(await bcrypt.compare(dto.password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
+    const staffName = user.staff?.staffName || 'Unknow User';
     // 1. Generate Access and Refresh Tokens
     const tokens = await this.getTokens(
       user.id,
       user.email,
       user.staff.company.id,
+      staffName,
     );
 
     // 2. Save the Refresh Token to the database
@@ -145,14 +146,19 @@ export class CredentialsService {
     };
   }
 
-  async getTokens(userId: string, email: string, companyId: string) {
+  async getTokens(
+    userId: string,
+    email: string,
+    companyId: string,
+    staffName: string,
+  ) {
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: userId, email, companyId },
-        { secret: 'AT_SECRET', expiresIn: '4h' }, // Use env variables in production
+        { sub: userId, email, companyId, staffName },
+        { secret: 'AT_SECRET', expiresIn: '4h' },
       ),
       this.jwtService.signAsync(
-        { sub: userId, email, companyId },
+        { sub: userId, email, companyId, staffName },
         { secret: 'RT_SECRET', expiresIn: '7d' },
       ),
     ]);
@@ -199,17 +205,42 @@ export class CredentialsService {
     if (!isMatch) {
       throw new UnauthorizedException('Invalid Refresh Token');
     }
-
+    const staffName = user.staff?.staffName || 'Unknown User';
     // ၄။ Token အသစ်ပြန်ထုတ်ပေးခြင်း
     const tokens = await this.getTokens(
       user.id,
       user.email,
       user.staff.company.id,
+      staffName,
     );
 
-    // ၅။ DB ထဲတွင် token အသစ်ကို update လုပ်သည်
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
     return tokens;
+  }
+
+  async restoreCredential(email: string): Promise<Credential> {
+    const credentialRepo = this.dataSource.getRepository(Credential);
+
+    const existing = await credentialRepo.findOne({
+      where: { email },
+      withDeleted: true,
+    });
+
+    if (existing) {
+      if ('deletedAt' in existing) {
+        (existing as Credential & { deletedAt?: Date | null }).deletedAt = null;
+        return await credentialRepo.save(existing);
+      }
+      return existing;
+    }
+
+    const hashedPassword = await bcrypt.hash('123456', 10);
+    const newCredential = credentialRepo.create({
+      email,
+      password: hashedPassword,
+    });
+
+    return await credentialRepo.save(newCredential);
   }
 }
