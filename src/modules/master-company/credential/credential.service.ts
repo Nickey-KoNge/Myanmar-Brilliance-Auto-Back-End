@@ -104,7 +104,7 @@ export class CredentialsService {
     const credentialRepo = this.dataSource.getRepository(Credential);
 
     const result = await credentialRepo.delete(id);
-
+    // const result = await credentialRepo.softDelete(id);
     if (result.affected === 0) {
       throw new NotFoundException('Credential not found');
     }
