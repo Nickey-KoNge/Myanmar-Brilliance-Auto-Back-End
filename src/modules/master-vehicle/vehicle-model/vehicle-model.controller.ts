@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  UseGuards,
   // UseGuards,
 } from '@nestjs/common';
 import { Serialize } from '../../../common/interceptors/serialize.interceptor';
@@ -17,14 +18,14 @@ import { UpdateVehicleModelDto } from './dtos/update-vehicle-model.dto';
 import { PaginateVehicleModelDto } from './dtos/paginate-vehicle-model.dto';
 import { VehicleModelDto } from './serialize/find-vehicle-model.serialize';
 import { GetVehicleModelSerialize } from './serialize/get-vehicle-model.serialize';
-// import { AtGuard } from '../../../common/guards/at.guard';
+import { AtGuard } from '../../../common/guards/at.guard';
 
-@Controller('vehicle-model')
-// @UseGuards(AtGuard)
+@Controller('master-vehicle/vehicle-models')
+@UseGuards(AtGuard)
 export class VehicleModelController {
   constructor(private readonly vehicleModelService: VehicleModelService) {}
 
-  @Get('list')
+  @Get()
   @Serialize(VehicleModelDto) // List အတွက် Serializer
   async findAll(
     @Query('search') search?: string,
@@ -50,7 +51,7 @@ export class VehicleModelController {
     return await this.vehicleModelService.findOne(id);
   }
 
-  @Post('register')
+  @Post()
   @Serialize(GetVehicleModelSerialize)
   async create(@Body() dto: CreateVehicleModelDto) {
     return this.vehicleModelService.create(dto);
