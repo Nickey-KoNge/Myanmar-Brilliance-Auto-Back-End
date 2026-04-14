@@ -21,4 +21,13 @@ export class FindVehicleBrandsSerialize {
 
   @Expose()
   status!: string;
+
+  @Expose()
+  activeCount!: number;
+
+  @Expose()
+  inactiveCount!: number;
+
+  @Expose()
+  lastEditedBy!: string;
 }

@@ -14,6 +14,15 @@ class VehicleModelItemDto {
   @Expose() seat!: number;
   @Expose() status!: string;
   @Expose() createdAt!: Date;
+
+  @Expose()
+  activeCount!: number;
+
+  @Expose()
+  inactiveCount!: number;
+
+  @Expose()
+  lastEditedBy!: string;
 }
 
 class BrandItemDto {

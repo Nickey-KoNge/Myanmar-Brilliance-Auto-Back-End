@@ -337,55 +337,94 @@ export class CompanyService {
       throw error;
     }
   }
+
   async restoreCompany(auditId: string, userId: string): Promise<Company> {
-    // ၁။ Audit record ကို ရှာပါ
     const auditRecord = await this.auditService.findOne(auditId);
 
     if (auditRecord.entity_name !== 'company') {
       throw new BadRequestException('This audit record is not for company');
     }
 
-    const dataToRestore = auditRecord.old_values;
+    const rawOldValues = (
+      typeof auditRecord.old_values === 'string'
+        ? JSON.parse(auditRecord.old_values)
+        : auditRecord.old_values
+    ) as Record<string, unknown> | null;
 
-    if (!dataToRestore) {
+    if (!rawOldValues || Object.keys(rawOldValues).length === 0) {
       throw new BadRequestException(
         'No old data available to restore from this action',
       );
     }
 
-    // ၃။ Database ထဲတွင် ရှိမရှိ စစ်ဆေးပါ
+    const dataToRestore = JSON.parse(JSON.stringify(rawOldValues)) as Record<
+      string,
+      unknown
+    >;
+
+    delete dataToRestore['deleted_at'];
+    delete dataToRestore['deletedAt'];
+    delete dataToRestore['updated_at'];
+    delete dataToRestore['updatedAt'];
+
     const existingCompany = await this.companyRepo.findOne({
       where: { id: auditRecord.entity_id },
       withDeleted: true,
     });
 
-    if (existingCompany) {
-      Object.assign(existingCompany, dataToRestore);
-      const restored = await this.companyRepo.save(existingCompany);
+    const toPlainObject = (data: unknown): Record<string, unknown> => {
+      return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+    };
 
-      // Audit ပြန်မှတ်မည်
+    const beforeState =
+      existingCompany !== null
+        ? toPlainObject(existingCompany)
+        : { status: 'Permanently Deleted / Not Exists' };
+
+    let restoredCompany: Company;
+
+    try {
+      if (existingCompany) {
+        if ('deletedAt' in existingCompany) {
+          (existingCompany as Company & { deletedAt?: Date | null }).deletedAt =
+            null;
+        }
+
+        this.companyRepo.merge(existingCompany, dataToRestore);
+        restoredCompany = await this.companyRepo.save(existingCompany);
+      } else {
+        const newCompany = this.companyRepo.create(dataToRestore);
+        newCompany.id = auditRecord.entity_id;
+        restoredCompany = await this.companyRepo.save(newCompany);
+      }
+
+      const afterState = {
+        id: restoredCompany.id,
+        ...dataToRestore,
+      };
+
       await this.auditService.logAction(
         'company',
-        restored.id,
+        restoredCompany.id,
         'RESTORE',
-        null,
-        null,
+        beforeState,
+        afterState,
         userId,
       );
-      return restored;
-    } else {
-      const newCompany = this.companyRepo.create(dataToRestore);
-      const restored = await this.companyRepo.save(newCompany);
 
-      await this.auditService.logAction(
-        'company',
-        restored.id,
-        'RESTORE',
-        null,
-        null,
-        userId,
-      );
-      return restored;
+      return restoredCompany;
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as Record<string, unknown>).code === '23505' // Unique Constraint Violation
+      ) {
+        throw new BadRequestException(
+          'Cannot restore company. Registration Number or Email already exists in another active record.',
+        );
+      }
+      throw error;
     }
   }
 }
