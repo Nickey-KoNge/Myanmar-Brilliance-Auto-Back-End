@@ -8,7 +8,8 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
-  // UseGuards,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { Serialize } from '../../../common/interceptors/serialize.interceptor';
 import { VehicleModelService } from './vehicle-model.service';
@@ -17,43 +18,42 @@ import { UpdateVehicleModelDto } from './dtos/update-vehicle-model.dto';
 import { PaginateVehicleModelDto } from './dtos/paginate-vehicle-model.dto';
 import { VehicleModelDto } from './serialize/find-vehicle-model.serialize';
 import { GetVehicleModelSerialize } from './serialize/get-vehicle-model.serialize';
-// import { AtGuard } from '../../../common/guards/at.guard';
+import { AtGuard } from '../../../common/guards/at.guard';
 
-@Controller('vehicle-model')
-// @UseGuards(AtGuard)
+interface AuthenticatedRequest {
+  user?: {
+    sub?: string;
+    id?: string;
+    staffName?: string;
+    email?: string;
+  };
+}
+@Controller('master-vehicle/vehicle-models')
+@UseGuards(AtGuard)
 export class VehicleModelController {
   constructor(private readonly vehicleModelService: VehicleModelService) {}
 
-  @Get('list')
-  @Serialize(VehicleModelDto) // List အတွက် Serializer
-  async findAll(
-    @Query('search') search?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('vehicle_brand_id') vehicle_brand_id?: string,
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '10',
-  ) {
-    return this.vehicleModelService.findAll({
-      search,
-      startDate,
-      endDate,
-      vehicle_brand_id,
-      page: parseInt(page),
-      limit: parseInt(limit),
-    });
+  @Get()
+  @Serialize(VehicleModelDto)
+  async findAll(@Query() query: PaginateVehicleModelDto) {
+    return this.vehicleModelService.findAll(query);
   }
 
   @Get(':id')
-  @Serialize(GetVehicleModelSerialize) // Single data အတွက် Serializer
+  @Serialize(GetVehicleModelSerialize)
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return await this.vehicleModelService.findOne(id);
   }
 
-  @Post('register')
+  @Post()
   @Serialize(GetVehicleModelSerialize)
-  async create(@Body() dto: CreateVehicleModelDto) {
-    return this.vehicleModelService.create(dto);
+  async create(
+    @Body() dto: CreateVehicleModelDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return this.vehicleModelService.create(dto, userId);
   }
 
   @Patch(':id')
@@ -61,12 +61,27 @@ export class VehicleModelController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateVehicleModelDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.vehicleModelService.update(id, dto);
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return this.vehicleModelService.update(id, dto, userId);
   }
 
   @Delete(':id')
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.vehicleModelService.remove(id);
+  async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return this.vehicleModelService.remove(id, userId);
+  }
+
+  @Post('restore/:auditId')
+  async restore(
+    @Param('auditId') auditId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.vehicleModelService.restoreVehicleModel(auditId, userId);
   }
 }
