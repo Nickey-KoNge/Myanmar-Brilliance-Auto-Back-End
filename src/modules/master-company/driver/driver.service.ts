@@ -245,12 +245,14 @@ export class DriverService {
       await queryRunner.release();
     }
   }
+
   async update(
     id: string,
     dto: UpdateDriverDto,
     userId: string,
     file?: Express.Multer.File,
   ): Promise<Driver> {
+    // 1. Audit Log အတွက် Old State ကို ရှာပါ
     const driver = await this.repo.findOne({
       where: { id } as FindOptionsWhere<Driver>,
       relations: ['stations', 'credential_id'],
@@ -273,6 +275,7 @@ export class DriverService {
 
     const { email, password, station_id, ...driverData } = dto;
 
+    // 2. Credential Update
     if ((email || password) && credential) {
       const credId =
         typeof driver.credential_id === 'string'
@@ -283,27 +286,44 @@ export class DriverService {
     }
 
     let oldImageToDelete: string | null = null;
+    const updatePayload = { ...driverData } as Partial<Driver>;
+
     if (file) {
       if (driver.image) {
         oldImageToDelete = driver.image;
       }
-      driver.image = await this.fileService.uploadFile(file, 'drivers');
+      updatePayload.image = await this.fileService.uploadFile(file, 'drivers');
     }
-
-    Object.assign(driver, driverData);
 
     if (station_id !== undefined) {
-      driver.station_id = station_id;
+      updatePayload.station_id = station_id || null;
     }
 
-    const updatedDriver = await this.repo.save(driver);
+    // 4. TypeORM ၏ Cache ကိုကျော်၍ Database သို့ တိုက်ရိုက် Update လုပ်ခြင်း (save() အစား update() ကို သုံးသည်)
+    if (Object.keys(updatePayload).length > 0) {
+      await this.repo.update(id, updatePayload);
+    }
 
+    // 5. Update ဖြစ်သွားသော Data အသစ် (Station အသစ်ပါဝင်သည်) ကို ပြန်လည်ဆွဲထုတ်ခြင်း
+    const updatedDriver = await this.repo.findOne({
+      where: { id } as FindOptionsWhere<Driver>,
+      relations: ['stations', 'credential_id'],
+    });
+
+    if (!updatedDriver) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve updated driver',
+      );
+    }
+
+    // 6. ပုံဟောင်းဖျက်ခြင်း
     if (oldImageToDelete) {
       await this.fileService.deleteFile(oldImageToDelete).catch((err) => {
         console.warn(`Failed to delete old driver image:`, err);
       });
     }
 
+    // 7. Audit Log သိမ်းဆည်းခြင်း
     const cleanOldState = JSON.parse(JSON.stringify(oldState)) as Record<
       string,
       unknown
@@ -313,7 +333,7 @@ export class DriverService {
       unknown
     >;
 
-    if (driver.image) cleanNewState.image = driver.image;
+    if (updatedDriver.image) cleanNewState.image = updatedDriver.image;
 
     const { oldVals, newVals } = getChanges(cleanOldState, cleanNewState);
 

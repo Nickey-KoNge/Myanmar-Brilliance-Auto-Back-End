@@ -52,11 +52,19 @@ export class VehicleDriverAssignService {
         { status: 'Inactive', returned_at: new Date() },
       );
 
+      const validStationId = dto.station_id || driver.station_id || null;
+
+      // 🛑 TS 2769 Error ရှင်းရန်: create ထဲတွင် station ကို တိုက်ရိုက်မထည့်ပါ
       const newAssign = queryRunner.manager.create(VehicleDriverAssign, {
         ...dto,
         assigned_at: dto.assigned_at || new Date(),
         status: 'Ongoing',
       });
+
+      // 🛑 validStationId ရှိမှသာ (any မသုံးဘဲ) အသစ်ထည့်ပါသည်
+      if (validStationId) {
+        newAssign.station = { id: validStationId } as typeof newAssign.station;
+      }
 
       await queryRunner.manager.update(Vehicle, vehicle.id, { status: 'Busy' });
       await queryRunner.manager.update(Driver, driver.id, { status: 'Busy' });
@@ -171,15 +179,15 @@ export class VehicleDriverAssignService {
       id: assign.id,
       driver_id: assign.driver?.id ?? null,
       driver_name: assign.driver?.driver_name ?? null,
-      driver_image: assign.driver.image,
-      driver_nrc: assign.driver.nrc,
-      driver_license_type: assign.driver.license_type,
-      driver_license: assign.driver.license_no,
-      phone: assign.driver.phone,
+      driver_image: assign.driver?.image ?? null,
+      driver_nrc: assign.driver?.nrc ?? null,
+      driver_license_type: assign.driver?.license_type ?? null,
+      driver_license: assign.driver?.license_no ?? null,
+      phone: assign.driver?.phone ?? null,
       vehicle_id: assign.vehicle?.id ?? null,
       vehicle_name: assign.vehicle?.vehicle_name ?? null,
-      vehicle_image: assign.vehicle.image,
-      vehicle_license: assign.vehicle.license_plate,
+      vehicle_image: assign.vehicle?.image ?? null,
+      vehicle_license: assign.vehicle?.license_plate ?? null,
       station_id: assign.station?.id ?? null,
       station_name: assign.station?.station_name ?? null,
       createdAt: assign.createdAt,
@@ -201,13 +209,26 @@ export class VehicleDriverAssignService {
     if (hasFilters) return queryBuilder.getCount();
 
     try {
-      const result = await this.vehicleDriverAssignRepo.query(
+      // 🛑 ESLint (no-unsafe-assignment, no-unsafe-member-access) ရှင်းရန်: Result ကို unknown ဖြင့်ဖမ်းပြီး သေချာစစ်ဆေးပါသည်
+      const result: unknown = await this.vehicleDriverAssignRepo.query(
         `SELECT reltuples::bigint AS estimate FROM pg_class c 
          JOIN pg_namespace n ON n.oid = c.relnamespace 
          WHERE n.nspname = 'master_vehicle' AND c.relname = 'driver_assigns'`,
       );
 
-      const estimate = Number(result?.[0]?.estimate ?? 0);
+      let estimate = 0;
+
+      if (Array.isArray(result) && result.length > 0) {
+        const firstRow = result[0] as Record<string, unknown>;
+        if (
+          firstRow &&
+          typeof firstRow === 'object' &&
+          'estimate' in firstRow
+        ) {
+          estimate = Number(firstRow.estimate);
+        }
+      }
+
       return estimate < 1000 ? this.vehicleDriverAssignRepo.count() : estimate;
     } catch {
       return this.vehicleDriverAssignRepo.count();
@@ -217,7 +238,7 @@ export class VehicleDriverAssignService {
   async findOne(id: string) {
     const assign = await this.vehicleDriverAssignRepo.findOne({
       where: { id },
-      relations: { vehicle: true, driver: true },
+      relations: { vehicle: true, driver: true, station: true },
     });
 
     if (!assign) throw new NotFoundException(`Assignment not found`);
@@ -232,12 +253,12 @@ export class VehicleDriverAssignService {
     try {
       const assign = await queryRunner.manager.findOne(VehicleDriverAssign, {
         where: { id },
-        relations: { vehicle: true, driver: true },
+        relations: { vehicle: true, driver: true, station: true },
       });
 
       if (!assign) throw new NotFoundException(`Assignment not found`);
 
-      if (dto.vehicle_id && dto.vehicle_id !== assign.vehicle_id) {
+      if (dto.vehicle_id && dto.vehicle_id !== assign.vehicle?.id) {
         const newVehicle = await queryRunner.manager.findOneBy(Vehicle, {
           id: dto.vehicle_id,
         });
@@ -247,9 +268,11 @@ export class VehicleDriverAssignService {
           throw new ConflictException('New vehicle is already assigned/Busy');
         }
 
-        await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
-          status: 'Active',
-        });
+        if (assign.vehicle?.id) {
+          await queryRunner.manager.update(Vehicle, assign.vehicle.id, {
+            status: 'Active',
+          });
+        }
         await queryRunner.manager.update(Vehicle, newVehicle.id, {
           status: 'Busy',
         });
@@ -257,7 +280,7 @@ export class VehicleDriverAssignService {
         assign.vehicle = newVehicle;
       }
 
-      if (dto.driver_id && dto.driver_id !== assign.driver_id) {
+      if (dto.driver_id && dto.driver_id !== assign.driver?.id) {
         const newDriver = await queryRunner.manager.findOneBy(Driver, {
           id: dto.driver_id,
         });
@@ -267,9 +290,11 @@ export class VehicleDriverAssignService {
           throw new ConflictException('New driver is already assigned/Busy');
         }
 
-        await queryRunner.manager.update(Driver, assign.driver_id, {
-          status: 'Active',
-        });
+        if (assign.driver?.id) {
+          await queryRunner.manager.update(Driver, assign.driver.id, {
+            status: 'Active',
+          });
+        }
         await queryRunner.manager.update(Driver, newDriver.id, {
           status: 'Busy',
         });
@@ -278,15 +303,27 @@ export class VehicleDriverAssignService {
       }
 
       if (dto.status === 'Inactive' && assign.status === 'Active') {
-        await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
-          status: 'Active',
-        });
-        await queryRunner.manager.update(Driver, assign.driver_id, {
-          status: 'Active',
-        });
+        if (assign.vehicle?.id) {
+          await queryRunner.manager.update(Vehicle, assign.vehicle.id, {
+            status: 'Active',
+          });
+        }
+        if (assign.driver?.id) {
+          await queryRunner.manager.update(Driver, assign.driver.id, {
+            status: 'Active',
+          });
+        }
       }
 
       Object.assign(assign, dto);
+
+      if (dto.station_id !== undefined) {
+        const updatedStationId = dto.station_id || null;
+        assign.station = (
+          updatedStationId ? { id: updatedStationId } : null
+        ) as typeof assign.station;
+      }
+
       const updated = await queryRunner.manager.save(assign);
 
       await queryRunner.commitTransaction();
@@ -307,16 +344,21 @@ export class VehicleDriverAssignService {
     try {
       const assign = await queryRunner.manager.findOne(VehicleDriverAssign, {
         where: { id },
+        relations: ['vehicle', 'driver'],
       });
 
       if (!assign) throw new NotFoundException(`Assignment not found`);
 
-      await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
-        status: 'Active',
-      });
-      await queryRunner.manager.update(Driver, assign.driver_id, {
-        status: 'Active',
-      });
+      if (assign.vehicle?.id) {
+        await queryRunner.manager.update(Vehicle, assign.vehicle.id, {
+          status: 'Active',
+        });
+      }
+      if (assign.driver?.id) {
+        await queryRunner.manager.update(Driver, assign.driver.id, {
+          status: 'Active',
+        });
+      }
 
       await queryRunner.manager.delete(VehicleDriverAssign, id);
 
@@ -348,16 +390,21 @@ export class VehicleDriverAssignService {
       }
 
       await queryRunner.manager.update(VehicleDriverAssign, id, {
+        returned_at: new Date(),
         status: 'Completed',
       });
 
-      await queryRunner.manager.update(Vehicle, assign.vehicle_id, {
-        status: 'Active',
-      });
+      if (assign.vehicle?.id) {
+        await queryRunner.manager.update(Vehicle, assign.vehicle.id, {
+          status: 'Active',
+        });
+      }
 
-      await queryRunner.manager.update(Driver, assign.driver_id, {
-        status: 'Active',
-      });
+      if (assign.driver?.id) {
+        await queryRunner.manager.update(Driver, assign.driver.id, {
+          status: 'Active',
+        });
+      }
 
       await queryRunner.commitTransaction();
       return { message: 'Trip completed successfully' };
