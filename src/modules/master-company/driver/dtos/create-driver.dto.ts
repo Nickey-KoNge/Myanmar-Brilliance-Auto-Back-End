@@ -4,11 +4,21 @@ import {
   IsOptional,
   IsUUID,
   IsDateString,
-  // IsEnum,
+  IsEmail,
+  MinLength,
 } from 'class-validator';
 
 export class CreateDriverDto {
-  // Core Identity Attributes
+  // 🛑 Email နှင့် Password ကို ထပ်တိုးပါ
+  @IsEmail()
+  @IsNotEmpty()
+  email!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  password!: string;
+
   @IsString()
   @IsNotEmpty()
   driver_name!: string;
@@ -25,7 +35,6 @@ export class CreateDriverDto {
   @IsOptional()
   gender?: string;
 
-  // Contact & Address Details
   @IsString()
   @IsNotEmpty()
   phone!: string;
@@ -46,7 +55,6 @@ export class CreateDriverDto {
   @IsNotEmpty()
   address!: string;
 
-  // Professional Assignment
   @IsOptional()
   @IsUUID()
   @IsNotEmpty()

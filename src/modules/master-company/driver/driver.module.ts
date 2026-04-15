@@ -7,9 +7,15 @@ import { OpService } from '../../../common/service/op.service';
 import { FileServiceProvider } from '../../../common/service/file.service';
 import { OptimizeImageService } from '../../../common/service/optimize-image.service';
 import { ImgFileService } from '../../../common/service/imgfile.service';
+import { MasterAuditModule } from 'src/modules/master-audit/audit/audit.module';
+import { CredentialModule } from '../credential/credential.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Driver])],
+  imports: [
+    TypeOrmModule.forFeature([Driver]),
+    CredentialModule,
+    MasterAuditModule,
+  ],
   controllers: [DriverController],
   providers: [
     DriverService,
