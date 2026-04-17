@@ -16,6 +16,8 @@ import { Stations } from '../../../master-company/stations/entities/stations.ent
 import { Group } from '../../../master-company/group/entities/group.entity';
 // import { Supplier } from '../../supplier/entities/supplier.entity';
 import { VehicleDriverAssign } from '../../../master-vehicle/driver-assign/entities/vehicle-driver-assign.entity';
+import { RentalOperation } from '../../../master-rental/rental-operation/entities/rental-operation.entity';
+
 @Entity({ name: 'vehicles', schema: 'master_vehicle' })
 @Index(['vehicle_name', 'license_plate', 'status'])
 export class Vehicle {
@@ -122,4 +124,7 @@ export class Vehicle {
 
   @OneToMany(() => VehicleDriverAssign, (assign) => assign.vehicle)
   assignments!: VehicleDriverAssign[];
+
+  @OneToMany(() => RentalOperation, (ro) => ro.driver)
+  rental_operations!: RentalOperation[];
 }

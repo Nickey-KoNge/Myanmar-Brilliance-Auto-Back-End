@@ -1,4 +1,19 @@
-import { Expose, Transform } from 'class-transformer';
+import { Expose, Transform, Type } from 'class-transformer';
+
+class TripPriceDetailDto {
+  @Expose() id!: string;
+  @Expose() route_id!: string;
+  @Expose() daily_trip_rate!: string;
+  @Expose() overnight_trip_rate!: string;
+  @Expose() status!: string;
+
+  @Expose()
+  @Transform(
+    ({ obj }: { obj: { route?: { route_name: string } } }) =>
+      obj.route?.route_name || null,
+  )
+  route_name!: string | null;
+}
 
 export class GetVehicleModelSerialize {
   @Expose()
@@ -36,4 +51,8 @@ export class GetVehicleModelSerialize {
 
   @Expose()
   status!: string;
+
+  @Expose()
+  @Type(() => TripPriceDetailDto)
+  trip_prices!: TripPriceDetailDto[];
 }

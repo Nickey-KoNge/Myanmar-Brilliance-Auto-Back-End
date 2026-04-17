@@ -14,6 +14,7 @@ import {
 import { Stations } from '../../stations/entities/stations.entity';
 import { Credential } from '../../credential/entities/credential.entity';
 import { VehicleDriverAssign } from '../../../master-vehicle/driver-assign/entities/vehicle-driver-assign.entity';
+import { RentalOperation } from '../../../master-rental/rental-operation/entities/rental-operation.entity';
 
 @Entity({ name: 'driver', schema: 'master_company' })
 @Index(['driver_name', 'status'])
@@ -22,7 +23,7 @@ export class Driver {
   id!: string;
 
   @Index()
-  @Column({ unique: true, length: 100 })
+  @Column({ length: 100 })
   driver_name!: string;
 
   @OneToOne(() => Credential, (cred) => cred.driver, { onDelete: 'CASCADE' })
@@ -69,13 +70,13 @@ export class Driver {
   @Column({ type: 'varchar', unique: true, length: 50 })
   license_no!: string;
 
-  @Column({ type: 'varchar', unique: true, length: 10 })
+  @Column({ type: 'varchar', length: 10 })
   license_type!: string;
 
   @Column({ type: 'date', nullable: true })
   license_expiry!: Date;
 
-  @Column({ type: 'varchar', unique: true, length: 20 })
+  @Column({ type: 'varchar', length: 20 })
   driving_exp!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -99,4 +100,7 @@ export class Driver {
 
   @OneToMany(() => VehicleDriverAssign, (assign) => assign.driver)
   assignments!: VehicleDriverAssign[];
+
+  @OneToMany(() => RentalOperation, (ro) => ro.driver)
+  rental_operations!: RentalOperation[];
 }

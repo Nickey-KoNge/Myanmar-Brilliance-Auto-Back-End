@@ -11,4 +11,4 @@ import { MasterAuditModule } from '../../master-audit/audit/audit.module';
   controllers: [GroupController],
   providers: [GroupService, OpService],
 })
-export class GroupModule {}
+export class MasterGroupModule {}

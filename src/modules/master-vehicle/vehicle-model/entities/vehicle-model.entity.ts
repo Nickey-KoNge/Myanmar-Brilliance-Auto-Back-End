@@ -12,6 +12,8 @@ import {
 } from 'typeorm';
 import { VehicleBrands } from '../../vehicle-brands/entities/vehicle-brands.entity';
 import { Vehicle } from '../../vehicle/entities/vehicle.entity';
+import { TripPrice } from '../../../master-trips/trip-price/entities/trip-price.entity';
+
 @Entity({ name: 'vehicle_models', schema: 'master_vehicle' })
 @Index(['vehicle_model_name', 'fuel_type', 'status'])
 export class VehicleModels {
@@ -32,6 +34,9 @@ export class VehicleModels {
 
   @OneToMany(() => Vehicle, (vehicle) => vehicle.vehicle_model)
   vehicles!: Vehicle[];
+
+  @OneToMany(() => TripPrice, (tripPrice) => tripPrice.vehicle_model_relation)
+  trip_prices!: TripPrice[];
 
   @Index()
   @Column({ type: 'varchar', length: 50 })

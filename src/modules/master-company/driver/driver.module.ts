@@ -8,12 +8,12 @@ import { FileServiceProvider } from '../../../common/service/file.service';
 import { OptimizeImageService } from '../../../common/service/optimize-image.service';
 import { ImgFileService } from '../../../common/service/imgfile.service';
 import { MasterAuditModule } from 'src/modules/master-audit/audit/audit.module';
-import { CredentialModule } from '../credential/credential.module';
+import { MasterCredentialModule } from '../credential/credential.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Driver]),
-    CredentialModule,
+    MasterCredentialModule,
     MasterAuditModule,
   ],
   controllers: [DriverController],
@@ -25,4 +25,4 @@ import { CredentialModule } from '../credential/credential.module';
     OptimizeImageService,
   ],
 })
-export class DriverModule {}
+export class MasterDriverModule {}

@@ -12,4 +12,4 @@ import { VehicleDriverAssign } from './entities/vehicle-driver-assign.entity';
   providers: [VehicleDriverAssignService],
   exports: [VehicleDriverAssignService],
 })
-export class VehicleDriverAssignModule {}
+export class MasterVehicleDriverAssignModule {}

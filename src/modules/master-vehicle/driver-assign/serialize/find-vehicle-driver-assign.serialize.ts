@@ -42,4 +42,29 @@ export class FindVehicleDriverAssignSerialize {
       obj.station?.station_name || null,
   )
   station_name!: string;
+  @Expose()
+  @Transform(
+    ({
+      obj,
+    }: {
+      obj: {
+        vehicle?: { current_odometer?: string };
+        current_odometer?: string;
+      };
+    }) => obj.vehicle?.current_odometer || obj.current_odometer || null,
+  )
+  current_odometer!: string | null;
+
+  @Expose()
+  @Transform(
+    ({
+      obj,
+    }: {
+      obj: {
+        station?: { branch?: { branches_name?: string } };
+        branch_name?: string;
+      };
+    }) => obj.station?.branch?.branches_name || obj.branch_name || null,
+  )
+  branch_name!: string | null;
 }

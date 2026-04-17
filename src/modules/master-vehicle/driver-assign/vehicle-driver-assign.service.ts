@@ -54,14 +54,12 @@ export class VehicleDriverAssignService {
 
       const validStationId = dto.station_id || driver.station_id || null;
 
-      // 🛑 TS 2769 Error ရှင်းရန်: create ထဲတွင် station ကို တိုက်ရိုက်မထည့်ပါ
       const newAssign = queryRunner.manager.create(VehicleDriverAssign, {
         ...dto,
         assigned_at: dto.assigned_at || new Date(),
         status: 'Ongoing',
       });
 
-      // 🛑 validStationId ရှိမှသာ (any မသုံးဘဲ) အသစ်ထည့်ပါသည်
       if (validStationId) {
         newAssign.station = { id: validStationId } as typeof newAssign.station;
       }
@@ -93,6 +91,7 @@ export class VehicleDriverAssignService {
       lastCreatedAt,
       startDate,
       endDate,
+      status,
     } = query;
 
     const queryBuilder = this.vehicleDriverAssignRepo
@@ -100,6 +99,7 @@ export class VehicleDriverAssignService {
       .leftJoinAndSelect('driver_assigns.driver', 'drivers')
       .leftJoinAndSelect('driver_assigns.vehicle', 'vehicles')
       .leftJoinAndSelect('driver_assigns.station', 'stations')
+      .leftJoinAndSelect('stations.branch', 'branch')
       .select([
         'driver_assigns',
         'drivers.id',
@@ -113,8 +113,10 @@ export class VehicleDriverAssignService {
         'vehicles.vehicle_name',
         'vehicles.image',
         'vehicles.license_plate',
+        'vehicles.current_odometer',
         'stations.id',
         'stations.station_name',
+        'branch.branches_name',
       ]);
 
     if (driver_id) {
@@ -132,6 +134,11 @@ export class VehicleDriverAssignService {
     if (station_id) {
       queryBuilder.andWhere('driver_assigns.station_id = :station_id', {
         station_id,
+      });
+    }
+    if (status) {
+      queryBuilder.andWhere('driver_assigns.status = :status', {
+        status,
       });
     }
 
@@ -175,24 +182,34 @@ export class VehicleDriverAssignService {
       ),
     ]);
 
-    const data = rawData.map((assign) => ({
-      id: assign.id,
-      driver_id: assign.driver?.id ?? null,
-      driver_name: assign.driver?.driver_name ?? null,
-      driver_image: assign.driver?.image ?? null,
-      driver_nrc: assign.driver?.nrc ?? null,
-      driver_license_type: assign.driver?.license_type ?? null,
-      driver_license: assign.driver?.license_no ?? null,
-      phone: assign.driver?.phone ?? null,
-      vehicle_id: assign.vehicle?.id ?? null,
-      vehicle_name: assign.vehicle?.vehicle_name ?? null,
-      vehicle_image: assign.vehicle?.image ?? null,
-      vehicle_license: assign.vehicle?.license_plate ?? null,
-      station_id: assign.station?.id ?? null,
-      station_name: assign.station?.station_name ?? null,
-      createdAt: assign.createdAt,
-      status: assign.status,
-    }));
+    const data = rawData.map((assign) => {
+      const branchData = assign.station as unknown as {
+        branch?: { branches_name?: string };
+      };
+
+      return {
+        id: assign.id,
+        driver_id: assign.driver?.id ?? null,
+        driver_name: assign.driver?.driver_name ?? null,
+        driver_image: assign.driver?.image ?? null,
+        driver_nrc: assign.driver?.nrc ?? null,
+        driver_license_type: assign.driver?.license_type ?? null,
+        driver_license: assign.driver?.license_no ?? null,
+        phone: assign.driver?.phone ?? null,
+        vehicle_id: assign.vehicle?.id ?? null,
+        vehicle_name: assign.vehicle?.vehicle_name ?? null,
+        vehicle_image: assign.vehicle?.image ?? null,
+        vehicle_license: assign.vehicle?.license_plate ?? null,
+        current_odometer: assign.vehicle?.current_odometer ?? null,
+        station_id: assign.station?.id ?? null,
+        station_name: assign.station?.station_name ?? null,
+        branch_name: branchData?.branch?.branches_name ?? null,
+        createdAt: assign.createdAt,
+        status: assign.status,
+        vehicle: assign.vehicle,
+        station: assign.station,
+      };
+    });
 
     return {
       data,
@@ -209,7 +226,6 @@ export class VehicleDriverAssignService {
     if (hasFilters) return queryBuilder.getCount();
 
     try {
-      // 🛑 ESLint (no-unsafe-assignment, no-unsafe-member-access) ရှင်းရန်: Result ကို unknown ဖြင့်ဖမ်းပြီး သေချာစစ်ဆေးပါသည်
       const result: unknown = await this.vehicleDriverAssignRepo.query(
         `SELECT reltuples::bigint AS estimate FROM pg_class c 
          JOIN pg_namespace n ON n.oid = c.relnamespace 
@@ -238,7 +254,7 @@ export class VehicleDriverAssignService {
   async findOne(id: string) {
     const assign = await this.vehicleDriverAssignRepo.findOne({
       where: { id },
-      relations: { vehicle: true, driver: true, station: true },
+      relations: { vehicle: true, driver: true, station: { branch: true } },
     });
 
     if (!assign) throw new NotFoundException(`Assignment not found`);

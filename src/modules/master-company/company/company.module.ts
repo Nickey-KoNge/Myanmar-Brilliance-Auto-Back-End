@@ -13,4 +13,4 @@ import { MasterAuditModule } from 'src/modules/master-audit/audit/audit.module';
   controllers: [CompanyController],
   providers: [CompanyService, FileServiceProvider, OptimizeImageService],
 })
-export class CompanyModule {}
+export class MasterCompanyModule {}
