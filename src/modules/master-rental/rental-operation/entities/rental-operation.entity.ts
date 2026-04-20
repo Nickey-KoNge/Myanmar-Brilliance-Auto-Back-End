@@ -60,7 +60,7 @@ export class RentalOperation {
   @Column({ type: 'varchar', length: 3, nullable: true })
   end_battery!: string | null;
 
-  @Column({ type: 'varchar', length: 2, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
   extra_hours!: string | null;
 
   @Column({ type: 'varchar', length: 2, nullable: true })

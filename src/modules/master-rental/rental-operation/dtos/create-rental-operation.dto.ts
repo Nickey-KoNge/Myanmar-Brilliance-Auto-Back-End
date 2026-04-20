@@ -64,7 +64,7 @@ export class CreateRentalOperationDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(2)
+  @MaxLength(20)
   extra_hours?: string;
 
   @IsOptional()

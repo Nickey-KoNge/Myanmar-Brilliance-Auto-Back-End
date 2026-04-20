@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { dataSourceOptions } from './database/typeorm.config';
@@ -26,6 +27,8 @@ import { RentalOperationModule } from './modules/master-rental/rental-operation/
 import { RouteModule } from './modules/master-trips/route/route.module';
 import { TripPriceModule } from './modules/master-trips/trip-price/trip-price.module';
 
+import { TripFinanceModule } from './modules/master-rental/trip-finance/trip-finance.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -42,6 +45,7 @@ import { TripPriceModule } from './modules/master-trips/trip-price/trip-price.mo
       rootPath: join(process.cwd(), 'public'),
       renderPath: '/public',
     }),
+    ScheduleModule.forRoot(),
 
     MasterCompanyBranchesModule,
     MasterCompanyStationsModule,
@@ -59,8 +63,7 @@ import { TripPriceModule } from './modules/master-trips/trip-price/trip-price.mo
     RentalOperationModule,
     RouteModule,
     TripPriceModule,
-
-    // TripFinance,
+    TripFinanceModule,
   ],
   controllers: [],
   providers: [],

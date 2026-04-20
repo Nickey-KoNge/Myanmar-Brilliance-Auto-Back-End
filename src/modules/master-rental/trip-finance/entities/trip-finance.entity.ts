@@ -12,16 +12,16 @@ import { RentalOperation } from '../../rental-operation/entities/rental-operatio
 
 import { Staff } from '../../../master-company/staff/entities/staff.entity';
 
-@Entity({ name: 'trip_finances', schema: 'master-rental' })
+@Entity({ name: 'trip_finances', schema: 'master_rental' })
 export class TripFinance {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'trip_id', type: 'uuid' })
   @Index()
   trip_id!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'staff_id', type: 'uuid' })
   @Index()
   staff_id!: string;
 

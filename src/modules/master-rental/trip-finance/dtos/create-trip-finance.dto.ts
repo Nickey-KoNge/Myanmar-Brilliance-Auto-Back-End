@@ -47,6 +47,6 @@ export class CreateTripFinanceDto {
   status?: string;
 
   @IsOptional()
-  @IsDateString()
+  @IsDateString() // receive_date အတွက် format စစ်ရန်
   receive_date?: string;
 }

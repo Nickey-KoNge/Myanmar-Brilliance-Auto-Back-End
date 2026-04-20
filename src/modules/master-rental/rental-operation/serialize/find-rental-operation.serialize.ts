@@ -22,40 +22,69 @@ class RentalOperationItemDto {
 
   @Expose() status!: string;
   @Expose() created_at!: Date;
+  @Expose() updated_at!: Date;
+  @Expose() description!: string | null;
+  @Expose() overnight_count!: string | null;
+  @Expose() distance!: string | null;
+  @Expose() power_station_name!: string | null;
 
   // --- Relations (Names) ---
   @Expose()
   @Transform(
-    ({ obj }: { obj: { route?: { route_name: string } } }) =>
+    ({ obj }: { obj: { route?: { route_name?: string | null } } }) =>
       obj.route?.route_name || null,
   )
   route_name!: string | null;
 
   @Expose()
   @Transform(
-    ({ obj }: { obj: { vehicle?: { vehicle_name: string } } }) =>
+    ({ obj }: { obj: { vehicle?: { vehicle_name?: string | null } } }) =>
       obj.vehicle?.vehicle_name || null,
   )
   vehicle_name!: string | null;
 
   @Expose()
   @Transform(
-    ({ obj }: { obj: { driver?: { driver_name: string } } }) =>
+    ({ obj }: { obj: { vehicle?: { plate_number?: string | null } } }) =>
+      obj.vehicle?.plate_number || null,
+  )
+  plate_number!: string | null;
+
+  @Expose()
+  @Transform(
+    ({ obj }: { obj: { vehicle?: { image?: string | null } } }) =>
+      obj.vehicle?.image || null,
+  )
+  vehicle_image_url!: string | null;
+
+  @Expose()
+  @Transform(
+    ({ obj }: { obj: { driver?: { driver_name?: string | null } } }) =>
       obj.driver?.driver_name || null,
   )
   driver_name!: string | null;
 
   @Expose()
   @Transform(
-    ({ obj }: { obj: { station?: { station_name: string } } }) =>
+    ({ obj }: { obj: { driver?: { image?: string | null } } }) =>
+      obj.driver?.image || null,
+  )
+  driver_image_url!: string | null;
+
+  @Expose()
+  @Transform(
+    ({ obj }: { obj: { station?: { station_name?: string | null } } }) =>
       obj.station?.station_name || null,
   )
   station_name!: string | null;
 
   @Expose()
   @Transform(
-    ({ obj }: { obj: { station?: { branch?: { branches_name: string } } } }) =>
-      obj.station?.branch?.branches_name || null,
+    ({
+      obj,
+    }: {
+      obj: { station?: { branch?: { branches_name?: string | null } } };
+    }) => obj.station?.branch?.branches_name || null,
   )
   branch_name!: string | null;
 }

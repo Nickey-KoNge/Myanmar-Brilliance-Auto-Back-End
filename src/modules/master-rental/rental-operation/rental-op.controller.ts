@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { AtGuard } from 'src/common/guards/at.guard';
@@ -24,6 +25,7 @@ interface AuthenticatedRequest {
   user?: {
     sub?: string;
     id?: string;
+    userId: string;
     staffName?: string;
     email?: string;
   };
@@ -67,13 +69,16 @@ export class RentalOpController {
     @Body() dto: UpdateRentalOperationDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    const userId =
-      req.user?.id ||
-      req.user?.staffName ||
-      req.user?.email ||
-      req.user?.sub ||
-      'Unknown User';
-    return await this.service.update(id, dto, userId);
+    const ID = req.user?.userId || req.user?.id || req.user?.sub;
+
+    if (!ID) {
+      throw new UnauthorizedException('User ID (userId) not found in request');
+    }
+
+    const auditUserName =
+      req.user?.staffName || req.user?.email || 'Unknown User';
+
+    return await this.service.update(id, dto, auditUserName, ID);
   }
 
   @Delete(':id')
@@ -109,8 +114,14 @@ export class RentalOpController {
     @Body() dto: GenerateOpsByStationDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    const userId = req.user?.id || req.user?.staffName || 'Unknown User';
+    const ID = req.user?.id;
 
-    return await this.service.generateOpsByStationAndRoute(dto, userId);
+    if (!ID) {
+      throw new UnauthorizedException('User ID (userId) not found in request');
+    }
+
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.service.generateOpsByStationAndRoute(dto, userId, ID);
   }
 }

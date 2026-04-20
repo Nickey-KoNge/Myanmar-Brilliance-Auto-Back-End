@@ -10,7 +10,15 @@ import { MasterAuditService } from 'src/modules/master-audit/audit/audit.service
 import { getChanges } from '../../../common/utils/object.util';
 import { VehicleDriverAssign } from 'src/modules/master-vehicle/driver-assign/entities/vehicle-driver-assign.entity';
 import { GenerateOpsByStationDto } from './dtos/generate-ops.dto';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { TripFinanceService } from '../trip-finance/trip-finance.service';
+import { TripPrice } from '../../master-trips/trip-price/entities/trip-price.entity';
 
+// interface ExpectedVehicleData {
+//   vehicle_model_id?: string;
+//   vehicle_model?: { id: string };
+//   vehicleModel?: { id: string };
+// }
 @Injectable()
 export class RentalOpService {
   constructor(
@@ -21,6 +29,8 @@ export class RentalOpService {
     private readonly auditService: MasterAuditService,
     @InjectRepository(VehicleDriverAssign)
     private readonly driverAssignRepo: Repository<VehicleDriverAssign>,
+
+    private readonly tripFinanceService: TripFinanceService,
   ) {}
 
   async create(
@@ -166,17 +176,219 @@ export class RentalOpService {
     return op;
   }
 
+  // async update(
+  //   id: string,
+  //   dto: UpdateRentalOperationDto,
+  //   userId: string,
+  //   ID: string,
+  // ): Promise<RentalOperation> {
+  //   const existingOp = await this.rentalOpRepo.findOne({
+  //     where: { id },
+  //     relations: ['vehicle', 'vehicle.vehicle_model', 'route'],
+  //   });
+  //   if (!existingOp) throw new NotFoundException('Rental Operation not found');
+
+  //   if (
+  //     dto.trip_status === 'Completed' &&
+  //     existingOp.trip_status !== 'Completed'
+  //   ) {
+  //     try {
+  //       console.log('Finalizing Trip... Creating Finance Record for:', id);
+
+  //       // --- ၁။ Rental Amount သတ်မှတ်ခြင်း ---
+  //       const isCityTrip = existingOp.route?.route_name
+  //         ?.toLowerCase()
+  //         .includes('city');
+  //       const vModel = existingOp.vehicle?.vehicle_model;
+
+  //       const baseRate = isCityTrip
+  //         ? Number(vModel?.daily_trip_rate || 0)
+  //         : Number(vModel?.overnight_trip_rate || 0);
+
+  //       let overtimeAmount = 0;
+  //       const start = new Date(existingOp.start_time);
+  //       const end = new Date(dto.end_time || new Date());
+
+  //       const diffMs = end.getTime() - start.getTime();
+  //       const diffMins = Math.floor(diffMs / (1000 * 60)); // စုစုပေါင်းကြာချိန် (မိနစ်)
+
+  //       // Benchmark hours (City ဆို 12 နာရီ၊ နယ်ဆို 24 နာရီ စသဖြင့် သတ်မှတ်နိုင်သည်)
+  //       const benchmarkMins = isCityTrip ? 12 * 60 : 24 * 60;
+
+  //       if (diffMins > benchmarkMins) {
+  //         const extraMins = diffMins - benchmarkMins;
+  //         const ratePerHour = baseRate / (isCityTrip ? 12 : 24);
+  //         const ratePerMin = ratePerHour / 60;
+  //         overtimeAmount = Math.round(extraMins * ratePerMin);
+  //       }
+
+  //       // --- ၃။ Total တွက်ချက်ခြင်း ---
+  //       const refundAmount = Number(dto.amount || 0); // dto.amount ကို refund အဖြစ်ယူလျှင်
+  //       const total = baseRate + overtimeAmount - refundAmount;
+
+  //       console.log(
+  //         `Finalizing Trip: Base=${baseRate}, OT=${overtimeAmount}, Refund=${refundAmount}, Total=${total}`,
+  //       );
+
+  //       await this.tripFinanceService.create({
+  //         trip_id: id,
+  //         staff_id: ID,
+  //         rental_amount: String(baseRate),
+  //         overtime_amount: String(overtimeAmount),
+  //         refund_amount: String(refundAmount),
+  //         total: String(total),
+  //         payment_status: 'Pending',
+  //         status: 'Active',
+  //       });
+
+  //       console.log('TripFinance Created Successfully for Finalize');
+  //     } catch (finError) {
+  //       console.error('Failed to create Finance during Finalize:', finError);
+  //     }
+  //   }
+
+  //   const oldState = { ...existingOp };
+  //   const updatePayload = { ...dto } as Partial<RentalOperation>;
+
+  //   // Handle Scalar ID updates
+  //   if (dto.route_id) updatePayload.route_id = dto.route_id;
+  //   if (dto.vehicle_id) updatePayload.vehicle_id = dto.vehicle_id;
+  //   if (dto.driver_id) updatePayload.driver_id = dto.driver_id;
+  //   if (dto.station_id) updatePayload.station_id = dto.station_id;
+
+  //   if (Object.keys(updatePayload).length > 0) {
+  //     await this.rentalOpRepo.update(id, updatePayload);
+  //   }
+
+  //   const updatedOp = await this.findOne(id);
+
+  //   const cleanOldState = JSON.parse(JSON.stringify(oldState)) as Record<
+  //     string,
+  //     unknown
+  //   >;
+  //   const cleanNewState = JSON.parse(JSON.stringify(dto)) as Record<
+  //     string,
+  //     unknown
+  //   >;
+
+  //   const { oldVals, newVals } = getChanges(cleanOldState, cleanNewState);
+
+  //   if (Object.keys(newVals).length > 0) {
+  //     await this.auditService.logAction(
+  //       'rental_operation',
+  //       id,
+  //       'UPDATE',
+  //       oldVals,
+  //       newVals,
+  //       userId,
+  //     );
+  //   }
+
+  //   return updatedOp;
+  // }
   async update(
     id: string,
     dto: UpdateRentalOperationDto,
     userId: string,
+    ID: string,
   ): Promise<RentalOperation> {
-    const existingOp = await this.findOne(id);
+    const existingOp = await this.rentalOpRepo.findOne({
+      where: { id },
+      relations: ['vehicle', 'route'],
+    });
 
+    if (!existingOp) throw new NotFoundException('Rental Operation not found');
+
+    if (
+      dto.trip_status === 'Completed' &&
+      existingOp.trip_status !== 'Completed'
+    ) {
+      try {
+        console.log('Finalizing Trip... Creating Finance Record for:', id);
+
+        const routeName = existingOp.route?.route_name || 'Unknown Route';
+        const isCityTrip = routeName.toLowerCase().includes('city');
+        const routeId = existingOp.route_id;
+
+        // 🔍 Terminal တွင် ဘယ် ID ဖြင့်ရှာနေလဲ ကြည့်ရန်
+        console.log('--- 🔍 DEBUG: IDs for Trip Price Search ---');
+        console.log(
+          `Route ID: ${routeId} (Name: ${routeName}, isCity: ${isCityTrip})`,
+        );
+
+        let matchedTripPrice: TripPrice | null = null;
+
+        // 🛑 ပြင်ဆင်ချက်: vehicle_model_id ရှာသည့်ရှုပ်ထွေးသော Raw Query ကိုဖြုတ်ပြီး route_id ဖြင့်သာ တိုက်ရိုက်ရှာပါမည်
+        if (routeId) {
+          matchedTripPrice = await this.rentalOpRepo.manager.findOne(
+            TripPrice,
+            {
+              where: {
+                route_id: routeId,
+              },
+            },
+          );
+        }
+
+        if (!matchedTripPrice) {
+          console.error(
+            '❌ ERROR: No matching row in trip_prices table for this Route ID!',
+          );
+        } else {
+          console.log(
+            `✅ Found Price -> Daily: ${matchedTripPrice.daily_trip_rate}, Overnight: ${matchedTripPrice.overnight_trip_rate}`,
+          );
+        }
+
+        // --- ၁။ Rental Amount (Base Rate) တွက်ချက်ခြင်း ---
+        const baseRate = isCityTrip
+          ? Number(matchedTripPrice?.daily_trip_rate || 0)
+          : Number(matchedTripPrice?.overnight_trip_rate || 0);
+
+        // --- ၂။ Overtime တွက်ချက်ခြင်း ---
+        let overtimeAmount = 0;
+        const start = new Date(existingOp.start_time || new Date());
+        const end = new Date(dto.end_time || new Date());
+
+        const diffMs = end.getTime() - start.getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60)); // မိနစ်
+
+        const benchmarkMins = isCityTrip ? 12 * 60 : 24 * 60;
+
+        if (diffMins > benchmarkMins && baseRate > 0) {
+          const extraMins = diffMins - benchmarkMins;
+          const ratePerHour = baseRate / (isCityTrip ? 12 : 24);
+          const ratePerMin = ratePerHour / 60;
+          overtimeAmount = Math.round(extraMins * ratePerMin);
+        }
+
+        // --- ၃။ Total တွက်ချက်ခြင်း ---
+        const refundAmount = Number(dto.amount || 0);
+        const total = baseRate + overtimeAmount - refundAmount;
+
+        console.log(
+          `✅ Finalizing Trip Result: Base=${baseRate}, OT=${overtimeAmount}, Refund=${refundAmount}, Total=${total}`,
+        );
+
+        await this.tripFinanceService.create({
+          trip_id: id,
+          staff_id: ID,
+          rental_amount: String(baseRate),
+          overtime_amount: String(overtimeAmount),
+          refund_amount: String(refundAmount),
+          total: String(total),
+          payment_status: 'Pending',
+          status: 'Active',
+        });
+      } catch (finError) {
+        console.error('Failed to create Finance during Finalize:', finError);
+      }
+    }
+
+    // --- ပုံမှန် Update Logic ---
     const oldState = { ...existingOp };
     const updatePayload = { ...dto } as Partial<RentalOperation>;
 
-    // Handle Scalar ID updates
     if (dto.route_id) updatePayload.route_id = dto.route_id;
     if (dto.vehicle_id) updatePayload.vehicle_id = dto.vehicle_id;
     if (dto.driver_id) updatePayload.driver_id = dto.driver_id;
@@ -188,6 +400,7 @@ export class RentalOpService {
 
     const updatedOp = await this.findOne(id);
 
+    // Any မပါစေရန် Record<string, unknown> ကို သုံးထားသည်
     const cleanOldState = JSON.parse(JSON.stringify(oldState)) as Record<
       string,
       unknown
@@ -212,7 +425,6 @@ export class RentalOpService {
 
     return updatedOp;
   }
-
   async remove(id: string, userId: string): Promise<{ id: string }> {
     const opToDelete = await this.findOne(id);
     const oldState = { ...opToDelete };
@@ -310,7 +522,6 @@ export class RentalOpService {
         opWithSoftDelete.deleted_at = null;
       }
 
-      // 🛑 TypeORM တွင် Scalar ID ပြောင်းလဲပါက Relation Object ကိုပါ ထည့်ပေးရပါမည်
       if (safeDataToRestore['route_id']) {
         existingOp.route = {
           id: safeDataToRestore['route_id'],
@@ -377,56 +588,73 @@ export class RentalOpService {
 
     return restored;
   }
-
-  //get driver and vehcile assignment by station and route
   async generateOpsByStationAndRoute(
     dto: GenerateOpsByStationDto,
     userId: string,
+    ID: string,
   ) {
+    console.log('Dto value :', dto);
+    console.log('userId Value :', userId);
+    console.log('ID value:', ID);
     const { station_id, route_id } = dto;
     const activeAssignments = await this.driverAssignRepo.find({
-      where: {
-        station: { id: station_id },
-        status: In(['Ongoing']),
-      },
+      where: { station: { id: station_id }, status: In(['Ongoing']) },
       relations: ['vehicle', 'driver'],
     });
-
-    if (activeAssignments.length === 0) {
-      throw new NotFoundException(
-        `No active driver-vehicle assignments found for station ID ${station_id} and route ID ${route_id}`,
-      );
-    }
-    const createdOps: RentalOperation[] = [];
-
-    for (const assign of activeAssignments) {
-      const newOpPayload = this.rentalOpRepo.create({
-        station_id: station_id,
-        route_id: route_id,
-        vehicle_id: assign.vehicle_id,
-        driver_id: assign.driver_id,
-        trip_status: 'Pending',
+    if (activeAssignments.length === 0) return [];
+    // ၁။ Rental Operations အရင်သိမ်းသည်
+    const opsData = activeAssignments.map((assign) => ({
+      station_id: station_id,
+      route_id: route_id,
+      vehicle_id: assign.vehicle_id,
+      driver_id: assign.driver_id,
+      trip_status: 'Pending',
+      status: 'Active',
+      start_time: new Date(),
+    }));
+    // repository.create ထဲကို အကုန်ထည့်ပါ
+    const entities = this.rentalOpRepo.create(opsData);
+    const savedOps = await this.rentalOpRepo.save(entities);
+    console.log('Saved Ops Count:', savedOps.length);
+    // ၂။ အကယ်၍ bulk generate လုပ်စဉ်မှာတင် Finance ပါ ဆောက်ချင်ရင်
+    const financePromises = savedOps.map((op) =>
+      this.tripFinanceService.create({
+        trip_id: op.id,
+        staff_id: ID,
+        rental_amount: '0',
+        overtime_amount: '0',
+        refund_amount: '0',
+        total: '0',
+        payment_status: 'Pending',
         status: 'Active',
-        start_time: new Date(),
-      });
-      createdOps.push(newOpPayload);
-    }
-
-    // save data on db
-    const savedOps = await this.rentalOpRepo.save(createdOps);
-
-    for (const op of savedOps) {
-      await this.auditService.logAction(
-        'rental_operation',
-        op.id,
-        'CREATE',
-        null,
-        { ...op },
-        userId,
-      );
-    }
-
-    // front end data return format
+      }),
+    );
+    const savedFinances = await Promise.all(financePromises);
+    console.log('Saved Finances Result:', savedFinances);
+    // ၄။ Audit logs သွင်းခြင်း
+    const auditPromises = [
+      ...savedOps.map((op) =>
+        this.auditService.logAction(
+          'rental_operation',
+          op.id,
+          'CREATE',
+          null,
+          { ...op },
+          userId,
+        ),
+      ),
+      ...savedFinances.map((fin) =>
+        this.auditService.logAction(
+          'trip_finances',
+          fin.id,
+          'CREATE',
+          null,
+          { ...fin },
+          userId,
+        ),
+      ),
+    ];
+    await Promise.all(auditPromises);
     return await this.rentalOpRepo.find({
       where: { id: In(savedOps.map((op) => op.id)) },
       relations: [
@@ -437,7 +665,74 @@ export class RentalOpService {
         'vehicle.vehicle_model',
         'vehicle.vehicle_model.vehicle_brand',
         'station.branch',
+        'trip_finances',
       ],
     });
+  }
+  //auto update and re new form လုပ်ဖို ပါ ည၁၂ ထိုးတာနဲ့ လုပ်ပါမယ်
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async generateDailyCityTrips() {
+    console.log('Running Auto-Dispatch Cron Job for City Trips at Midnight...');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+      const completedCityTrips = await this.rentalOpRepo
+        .createQueryBuilder('op')
+        .leftJoinAndSelect('op.route', 'route')
+        .where('op.trip_status = :status', { status: 'Completed' })
+        .andWhere('op.updated_at >= :today', { today })
+        .andWhere('LOWER(route.route_name) LIKE :cityPattern', {
+          cityPattern: '%city%',
+        })
+        .orderBy('op.updated_at', 'DESC')
+        .getMany();
+
+      if (completedCityTrips.length === 0) {
+        console.log(
+          'No completed City Trips found for today. Skipping next dispatch creation.',
+        );
+        return;
+      }
+
+      for (const op of completedCityTrips) {
+        const existingPending = await this.rentalOpRepo.findOne({
+          where: {
+            vehicle_id: op.vehicle_id,
+            trip_status: In(['Pending', 'Ongoing']),
+            status: 'Active',
+          },
+        });
+
+        if (!existingPending) {
+          const newPendingOp = this.rentalOpRepo.create({
+            station_id: op.station_id,
+            route_id: op.route_id,
+            vehicle_id: op.vehicle_id,
+            driver_id: op.driver_id,
+            start_odo: op.end_odo,
+            start_battery: op.end_battery,
+            trip_status: 'Pending',
+            status: 'Active',
+          });
+
+          const savedOp = await this.rentalOpRepo.save(newPendingOp);
+
+          await this.auditService.logAction(
+            'rental_operation',
+            savedOp.id,
+            'CREATE',
+            null,
+            { ...savedOp },
+            'System-Cron-Job',
+          );
+        }
+      }
+
+      console.log('Successfully created auto-dispatches for tomorrow.');
+    } catch (error) {
+      console.error('Error generating daily city trips from Cron:', error);
+    }
   }
 }
