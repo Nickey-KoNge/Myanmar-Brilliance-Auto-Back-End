@@ -7,14 +7,18 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { RouteService } from './route.service';
 import { CreateRouteDto } from './dtos/create-route.dto';
 import { UpdateRouteDto } from './dtos/update-route.dto';
 import { AtGuard } from 'src/common/guards/at.guard';
+import { Serialize } from 'src/common/interceptors/serialize.interceptor';
+import { FindRouteSerialize } from './serialize/find-route.serialize';
+import { PaginateRouteDto } from './dtos/paginate-route.dto';
 
 @Controller('master-trips/routes')
-@UseGuards(AtGuard)
+//@UseGuards(AtGuard)
 export class RouteController {
   constructor(private readonly routeService: RouteService) {}
 
@@ -23,9 +27,10 @@ export class RouteController {
     return this.routeService.create(createRouteDto);
   }
 
+  @Serialize(FindRouteSerialize)
   @Get()
-  findAll() {
-    return this.routeService.findAll();
+  findAll(@Query() query:PaginateRouteDto) {
+    return this.routeService.findAll(query);
   }
 
   @Get(':id')
