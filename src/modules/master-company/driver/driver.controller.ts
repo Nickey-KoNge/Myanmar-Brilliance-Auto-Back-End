@@ -22,6 +22,17 @@ import { UpdateDriverDto } from './dtos/update-driver.dto';
 import { PaginateDriverDto } from './dtos/paginate-driver.dto';
 // import { FindDriverSerialize } from './serialize/find-driver.serialize';
 import { GetDriverSerialize } from './serialize/get-driver.serialize';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+
+// interface AuthenticatedRequest {
+//   user?: {
+//     sub?: string;
+//     id?: string;
+//     staffName?: string;
+//     email?: string;
+//   };
+// }
 
 interface AuthenticatedRequest {
   user?: {
@@ -29,11 +40,13 @@ interface AuthenticatedRequest {
     id?: string;
     staffName?: string;
     email?: string;
+    role?: string;
+    companyId?: string;
   };
 }
 
 @Controller('master-company/driver')
-@UseGuards(AtGuard)
+@UseGuards(AtGuard, RolesGuard)
 export class DriverController {
   constructor(private readonly driverService: DriverService) {}
 
@@ -76,6 +89,7 @@ export class DriverController {
   }
 
   @Delete(':id')
+  // @Roles('Admin', 'Super Admin')
   async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const userId =
       req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';

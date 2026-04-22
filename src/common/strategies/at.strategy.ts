@@ -29,6 +29,7 @@ export class AtStrategy extends PassportStrategy(Strategy, 'jwt') {
       where: {
         credential: { id: payload.sub },
       } as FindOptionsWhere<Staff>,
+      relations: ['role'],
     });
     return {
       userId: staff ? staff.id : payload.sub,
@@ -36,6 +37,7 @@ export class AtStrategy extends PassportStrategy(Strategy, 'jwt') {
       companyId: payload.companyId,
       staffName: payload.staffName,
       credentialId: payload.sub,
+      role: staff?.role?.role_name,
     };
   }
 }

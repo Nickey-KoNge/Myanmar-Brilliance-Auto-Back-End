@@ -114,7 +114,8 @@ export class CredentialsService {
     console.log(dto.email);
     const user = await this.dataSource.getRepository(Credential).findOne({
       where: { email: dto.email },
-      relations: ['staff', 'staff.company'],
+      // relations: ['staff', 'staff.company'],
+      relations: ['staff', 'staff.company', 'staff.role'],
       select: ['id', 'email', 'password', 'status'],
     });
 
@@ -122,16 +123,23 @@ export class CredentialsService {
       throw new UnauthorizedException('Invalid credentials');
     }
     const staffName = user.staff?.staffName || 'Unknow User';
+
+    const role = user.staff?.role?.role_name;
+
     // 1. Generate Access and Refresh Tokens
     const tokens = await this.getTokens(
       user.id,
       user.email,
       user.staff.company.id,
       staffName,
+      role,
     );
 
     // 2. Save the Refresh Token to the database
     await this.updateRefreshToken(user.id, tokens.refresh_token);
+
+    console.log('LOGIN ROLE RAW:', user.staff?.role);
+    console.log('LOGIN ROLE NAME:', role);
 
     return {
       message: 'Login successful',
@@ -142,6 +150,7 @@ export class CredentialsService {
         staffName: user.staff?.staffName || 'Unknown User',
         image: user.staff?.image || null,
         companyId: user.staff?.company?.id,
+        role,
       },
     };
   }
@@ -151,14 +160,29 @@ export class CredentialsService {
     email: string,
     companyId: string,
     staffName: string,
+    role: string,
   ) {
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: userId, email, companyId, staffName },
+        // { sub: userId, email, companyId, staffName },
+        {
+          sub: userId,
+          email,
+          companyId,
+          staffName,
+          role,
+        },
         { secret: 'AT_SECRET', expiresIn: '4h' },
       ),
       this.jwtService.signAsync(
-        { sub: userId, email, companyId, staffName },
+        // { sub: userId, email, companyId, staffName },
+        {
+          sub: userId,
+          email,
+          companyId,
+          staffName,
+          role,
+        },
         { secret: 'RT_SECRET', expiresIn: '7d' },
       ),
     ]);
@@ -181,7 +205,8 @@ export class CredentialsService {
   async refreshTokens(userId: string, refreshToken: string) {
     const user = await this.dataSource.getRepository(Credential).findOne({
       where: { id: userId },
-      relations: ['staff', 'staff.company'],
+      // relations: ['staff', 'staff.company'],
+      relations: ['staff', 'staff.company', 'staff.role'],
     });
 
     if (!user) throw new ForbiddenException('Access Denied');
@@ -206,12 +231,15 @@ export class CredentialsService {
       throw new UnauthorizedException('Invalid Refresh Token');
     }
     const staffName = user.staff?.staffName || 'Unknown User';
+    const role = user.staff?.role?.role_name;
+
     // ၄။ Token အသစ်ပြန်ထုတ်ပေးခြင်း
     const tokens = await this.getTokens(
       user.id,
       user.email,
       user.staff.company.id,
       staffName,
+      role,
     );
 
     await this.updateRefreshToken(user.id, tokens.refresh_token);
