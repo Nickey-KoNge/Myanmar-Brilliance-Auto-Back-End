@@ -36,6 +36,10 @@ export class PaginateRentalOperationDto {
 
   @IsOptional()
   @IsString()
+  trip_finance_id?: string;
+
+  @IsOptional()
+  @IsString()
   trip_status?: string;
 
   @IsOptional()

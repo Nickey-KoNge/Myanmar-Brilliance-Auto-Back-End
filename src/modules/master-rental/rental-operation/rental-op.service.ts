@@ -71,6 +71,7 @@ export class RentalOpService {
       vehicle_id,
       driver_id,
       station_id,
+      trip_finance_id,
       trip_status,
       status,
       startDate,
@@ -85,7 +86,14 @@ export class RentalOpService {
       .leftJoinAndSelect('rental_operation.vehicle', 'vehicle')
       .leftJoinAndSelect('rental_operation.driver', 'driver')
       .leftJoinAndSelect('rental_operation.station', 'station')
-      .leftJoinAndSelect('station.branch', 'branch');
+      .leftJoinAndSelect('station.branch', 'branch')
+      .leftJoinAndSelect('rental_operation.trip_finances', 'trip_finance');
+
+    if (trip_finance_id) {
+      queryBuilder.andWhere('rental_operation.trip_finance_id = :trip_finance_id', {
+        trip_finance_id,
+      });
+    }
 
     if (search) {
       queryBuilder.andWhere(
