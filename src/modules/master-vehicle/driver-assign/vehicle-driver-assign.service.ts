@@ -117,6 +117,8 @@ export class VehicleDriverAssignService {
         'stations.id',
         'stations.station_name',
         'branch.branches_name',
+        'vehicles.color',
+        'vehicles.city_taxi_no',
       ]);
 
     if (driver_id) {
@@ -170,19 +172,13 @@ export class VehicleDriverAssignService {
       queryBuilder.skip((page - 1) * limit);
     }
 
-    const [rawData, total] = await Promise.all([
-      queryBuilder
-        .orderBy('driver_assigns.createdAt', 'DESC')
-        .addOrderBy('driver_assigns.id', 'DESC')
-        .take(limit)
-        .getMany(),
-      this.getOptimizedCount(
-        queryBuilder,
-        !!(search || startDate || endDate || driver_id || vehicle_id),
-      ),
-    ]);
+    const [rawData, total] = await queryBuilder
+      .orderBy('driver_assigns.createdAt', 'DESC')
+      .addOrderBy('driver_assigns.id', 'DESC')
+      .take(limit)
+      .getManyAndCount();
 
-    const data = rawData.map((assign) => {
+    const data = rawData.map((assign: VehicleDriverAssign) => {
       const branchData = assign.station as unknown as {
         branch?: { branches_name?: string };
       };
@@ -201,6 +197,8 @@ export class VehicleDriverAssignService {
         vehicle_image: assign.vehicle?.image ?? null,
         vehicle_license: assign.vehicle?.license_plate ?? null,
         current_odometer: assign.vehicle?.current_odometer ?? null,
+        city_taxi_no: assign.vehicle?.city_taxi_no ?? null, // <--- အသစ်ထည့်ပါ
+        color: assign.vehicle?.color ?? null,
         station_id: assign.station?.id ?? null,
         station_name: assign.station?.station_name ?? null,
         branch_name: branchData?.branch?.branches_name ?? null,

@@ -66,7 +66,7 @@ export class GetVehicleDriverAssignSerialize {
       obj.station?.branch?.branches_name || null,
   )
   branch_name!: string | null;
-  
+
   @Expose()
   @Transform(
     ({ obj }: { obj: { vehicle?: { image: string } } }) =>
