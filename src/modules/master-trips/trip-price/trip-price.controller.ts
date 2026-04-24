@@ -18,7 +18,7 @@ import { Serialize } from 'src/common/interceptors/serialize.interceptor';
 import { FindTripPriceSerialize } from './serialize/find-trip-price.serialize';
 
 @Controller('master-trips/trip-prices')
-//@UseGuards(AtGuard)
+@UseGuards(AtGuard)
 export class TripPriceController {
   constructor(private readonly tpService: TripPriceService) {}
 
