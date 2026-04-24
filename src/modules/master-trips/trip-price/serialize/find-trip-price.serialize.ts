@@ -32,6 +32,28 @@ export class FindTripPriceSerialize {
 
   @Expose()
   @Transform(
+    ({obj}:{obj:{route?:{start_location:string}}})=>obj.route?.start_location || null
+  )
+  start_location!: string | null;
+
+
+  @Expose()
+  @Transform(
+    ({obj}:{obj:{route?:{end_location:string}}})=>obj.route?.end_location || null
+  )
+  end_location!: string | null;
+
+
+  @Expose()
+  @Transform(
+    ({ obj }: { obj: { route?: { status: string } } }) =>
+      obj.route?.status || null,
+  )
+  route_status!: string | null;
+
+
+  @Expose()
+  @Transform(
     ({
       obj,
     }: {
@@ -46,4 +68,12 @@ export class FindTripPriceSerialize {
       obj.station_relation?.station_name || null,
   )
   station_name!: string | null;
+
+
+  @Expose()
+  @Transform(
+    ({ obj }: { obj: { station_relation?: { phone: string } } }) =>
+      obj.station_relation?.phone || null,
+  )
+  station_phone!: string | null;
 }
