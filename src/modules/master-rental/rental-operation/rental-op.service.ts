@@ -90,9 +90,12 @@ export class RentalOpService {
       .leftJoinAndSelect('rental_operation.trip_finances', 'trip_finance');
 
     if (trip_finance_id) {
-      queryBuilder.andWhere('rental_operation.trip_finance_id = :trip_finance_id', {
-        trip_finance_id,
-      });
+      queryBuilder.andWhere(
+        'rental_operation.trip_finance_id = :trip_finance_id',
+        {
+          trip_finance_id,
+        },
+      );
     }
 
     if (search) {
@@ -678,7 +681,7 @@ export class RentalOpService {
     });
   }
   //auto update and re new form လုပ်ဖို ပါ ည၁၂ ထိုးတာနဲ့ လုပ်ပါမယ်
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async generateDailyCityTrips() {
     console.log('Running Auto-Dispatch Cron Job for City Trips at Midnight...');
 
