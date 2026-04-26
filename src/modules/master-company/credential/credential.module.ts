@@ -18,4 +18,4 @@ import { RefreshToken } from './entities/refresh-token.entity';
   providers: [CredentialsService],
   exports: [CredentialsService],
 })
-export class CredentialModule {}
+export class MasterCredentialModule {}

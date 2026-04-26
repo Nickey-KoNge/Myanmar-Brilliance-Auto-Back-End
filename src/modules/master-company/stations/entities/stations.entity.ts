@@ -13,6 +13,8 @@ import {
 import { Branches } from '../../branches/entities/branches.entity';
 import { Vehicle } from '../../../master-vehicle/vehicle/entities/vehicle.entity';
 import { VehicleDriverAssign } from '../../../master-vehicle/driver-assign/entities/vehicle-driver-assign.entity';
+import { TripPrice } from '../../../master-trips/trip-price/entities/trip-price.entity';
+import { RentalOperation } from '../../../master-rental/rental-operation/entities/rental-operation.entity';
 
 @Entity({ name: 'stations', schema: 'master_company' })
 @Index(['division', 'status'])
@@ -71,4 +73,10 @@ export class Stations {
 
   @OneToMany(() => VehicleDriverAssign, (assign) => assign.station)
   driver_assignments!: VehicleDriverAssign[];
+
+  @OneToMany(() => TripPrice, (tripPrice) => tripPrice.station_relation)
+  trip_prices!: TripPrice[];
+
+  @OneToMany(() => RentalOperation, (rentalOp) => rentalOp.station)
+  rental_operations!: RentalOperation[];
 }

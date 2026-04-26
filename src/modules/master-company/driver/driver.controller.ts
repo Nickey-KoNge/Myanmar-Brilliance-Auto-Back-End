@@ -9,8 +9,8 @@ import {
   Query,
   Delete,
   Param,
-  ParseUUIDPipe,
   Patch,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AtGuard } from '../../../common/guards/at.guard';
@@ -18,72 +18,91 @@ import { Serialize } from '../../../common/interceptors/serialize.interceptor';
 import { DriverResponseDto } from './serialize/driver-response.dto';
 import { CreateDriverDto } from './dtos/create-driver.dto';
 import { DriverService } from './driver.service';
-import { OptimizeImageService } from '../../../common/service/optimize-image.service';
-import { DriverDto } from './dtos/driver.dto';
 import { UpdateDriverDto } from './dtos/update-driver.dto';
+import { PaginateDriverDto } from './dtos/paginate-driver.dto';
+// import { FindDriverSerialize } from './serialize/find-driver.serialize';
+import { GetDriverSerialize } from './serialize/get-driver.serialize';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 
-@Controller('driver')
-// @UseGuards(AtGuard)
+// interface AuthenticatedRequest {
+//   user?: {
+//     sub?: string;
+//     id?: string;
+//     staffName?: string;
+//     email?: string;
+//   };
+// }
+
+interface AuthenticatedRequest {
+  user?: {
+    sub?: string;
+    id?: string;
+    staffName?: string;
+    email?: string;
+    role?: string;
+    companyId?: string;
+  };
+}
+
+@Controller('master-company/driver')
+@UseGuards(AtGuard, RolesGuard)
 export class DriverController {
-  constructor(
-    private readonly driverService: DriverService,
-    private readonly optimizeImageService: OptimizeImageService,
-  ) {}
+  constructor(private readonly driverService: DriverService) {}
 
-  @Get('list')
-  @Serialize(DriverDto)
-  async findAll(
-    @Query('search') search?: string,
-    @Query('fromDate') fromDate?: string,
-    @Query('toDate') toDate?: string,
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '10',
+  @Post()
+  @UseInterceptors(FileInterceptor('image'))
+  @Serialize(DriverResponseDto)
+  async create(
+    @Body() dto: CreateDriverDto,
+    @Req() req: AuthenticatedRequest,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.driverService.findAll({
-      search,
-      fromDate,
-      toDate,
-      page: parseInt(page),
-      limit: parseInt(limit),
-    });
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return this.driverService.createDriver(dto, userId, file);
+  }
+
+  @Get()
+  async findAll(@Query() query: PaginateDriverDto) {
+    return this.driverService.findAll(query);
   }
 
   @Get(':id')
+  @Serialize(GetDriverSerialize)
   async findOne(@Param('id') id: string) {
     return await this.driverService.findOne(id);
   }
 
-  @Post('register')
-  @Serialize(DriverResponseDto)
-  @UseInterceptors(FileInterceptor('image'))
-  async create(
-    @Body() dto: CreateDriverDto,
-    @UploadedFile() file?: Express.Multer.File,
-  ) {
-    let optimizedFile = file;
-    if (file) {
-      optimizedFile = await this.optimizeImageService.optimizeImage(file);
-    }
-    return this.driverService.createDriver(dto, optimizedFile);
-  }
-
   @Patch(':id')
-  @Serialize(DriverResponseDto)
   @UseInterceptors(FileInterceptor('image'))
+  @Serialize(GetDriverSerialize)
   async update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() dto: UpdateDriverDto,
+    @Req() req: AuthenticatedRequest,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    let optimizedFile = file;
-    if (file) {
-      optimizedFile = await this.optimizeImageService.optimizeImage(file);
-    }
-    return this.driverService.update(id, dto, optimizedFile);
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return this.driverService.update(id, dto, userId, file);
   }
 
   @Delete(':id')
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.driverService.remove(id);
+  // @Roles('Admin', 'Super Admin')
+  async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return this.driverService.remove(id, userId);
+  }
+
+  @Post('restore/:auditId')
+  async restore(
+    @Param('auditId') auditId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId =
+      req.user?.staffName || req.user?.email || req.user?.sub || 'Unknown User';
+    return await this.driverService.restoreDriver(auditId, userId);
   }
 }

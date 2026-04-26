@@ -6,7 +6,6 @@ import {
   Query,
   Delete,
   Param,
-  ParseUUIDPipe,
   Patch,
   UseGuards,
   Req,
@@ -41,7 +40,7 @@ export class VehicleModelController {
 
   @Get(':id')
   @Serialize(GetVehicleModelSerialize)
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+  async findOne(@Param('id') id: string) {
     return await this.vehicleModelService.findOne(id);
   }
 
@@ -59,7 +58,7 @@ export class VehicleModelController {
   @Patch(':id')
   @Serialize(GetVehicleModelSerialize)
   async update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() dto: UpdateVehicleModelDto,
     @Req() req: AuthenticatedRequest,
   ) {

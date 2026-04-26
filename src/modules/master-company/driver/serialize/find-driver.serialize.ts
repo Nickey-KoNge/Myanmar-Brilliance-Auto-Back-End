@@ -1,27 +1,63 @@
-import { Expose, Transform } from 'class-transformer';
+import { Expose } from 'class-transformer';
 
 export class FindDriverSerialize {
   @Expose()
   id!: string;
 
   @Expose()
+  driver_name!: string;
+
+  @Expose()
+  nrc!: string;
+
+  @Expose()
+  email!: string;
+
+  @Expose()
+  phone!: string;
+
+  @Expose()
+  station_id!: string | null;
+
+  @Expose()
+  credential_id!: string | null;
+
+  @Expose()
+  dob!: string | null;
+
+  @Expose()
+  gender!: string;
+
+  @Expose()
+  deposits!: string | null;
+
+  @Expose()
+  join_date!: string | null;
+
+  @Expose()
+  license_no!: string;
+
+  @Expose()
+  license_type!: string;
+
+  @Expose()
+  license_expiry!: string | null;
+
+  @Expose()
+  driving_exp!: string;
+
+  @Expose()
+  image!: string | null;
+
+  @Expose()
   status!: string;
 
   @Expose()
-  @Transform(
-    ({
-      obj,
-    }: {
-      obj: { address?: string; city?: string; country?: string };
-    }) => {
-      const addr = obj.address || '';
-      const city = obj.city || '';
-      const country = obj.country || '';
+  station_name!: string | null;
 
-      const combined = `${addr} ${city} ${country}`.trim();
-      return combined === '' ? null : combined;
-    },
-    { toClassOnly: true },
-  )
-  fullAddress!: string;
+  @Expose()
+  credential_email!: string | null;
+
+  @Expose()
+  fullAddress!: string | null;
 }

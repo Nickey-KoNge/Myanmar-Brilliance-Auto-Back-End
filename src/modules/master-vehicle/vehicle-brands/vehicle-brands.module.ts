@@ -13,4 +13,4 @@ import { MasterAuditModule } from 'src/modules/master-audit/audit/audit.module';
   providers: [VehicleBrandsService, FileServiceProvider, OptimizeImageService],
   exports: [VehicleBrandsService],
 })
-export class VehicleBrandsModule {}
+export class MasterVehicleBrandsModule {}

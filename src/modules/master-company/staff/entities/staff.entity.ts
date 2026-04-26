@@ -8,11 +8,13 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { Credential } from '../../credential/entities/credential.entity';
 import { Company } from '../../company/entities/company.entity';
 import { Branches } from '../../branches/entities/branches.entity';
 import { Role } from '../../../master-service/role/entities/role.entity';
+import { TripFinance } from '../../../master-rental/trip-finance/entities/trip-finance.entity';
 
 @Entity({ name: 'staff', schema: 'master_company' })
 @Index(['branch', 'status'])
@@ -86,4 +88,7 @@ export class Staff {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  @OneToMany(() => TripFinance, (tripFinance) => tripFinance.staff)
+  trip_finances!: TripFinance[];
 }

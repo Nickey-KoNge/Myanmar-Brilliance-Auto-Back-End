@@ -12,4 +12,4 @@ import { MasterAuditModule } from 'src/modules/master-audit/audit/audit.module';
   providers: [VehicleModelService],
   exports: [VehicleModelService],
 })
-export class VehicleModelModule {}
+export class MasterVehicleModelModule {}
