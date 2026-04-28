@@ -28,6 +28,7 @@ import { RouteModule } from './modules/master-trips/route/route.module';
 import { TripPriceModule } from './modules/master-trips/trip-price/trip-price.module';
 
 import { TripFinanceModule } from './modules/master-rental/trip-finance/trip-finance.module';
+import { ReportModule } from './modules/Rental-report/report.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { TripFinanceModule } from './modules/master-rental/trip-finance/trip-fin
     RouteModule,
     TripPriceModule,
     TripFinanceModule,
+    ReportModule,
   ],
   controllers: [],
   providers: [],
