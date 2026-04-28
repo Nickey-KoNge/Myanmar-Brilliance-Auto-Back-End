@@ -12,7 +12,7 @@ import type {
 import { Res } from '@nestjs/common';
 import type { Response } from 'express';
 @Controller('master-audit')
-@UseGuards(AtGuard)
+// @UseGuards(AtGuard)
 export class MasterAuditController {
   constructor(private readonly auditService: MasterAuditService) {}
 
@@ -58,5 +58,10 @@ export class MasterAuditController {
     @Param('entityId') entityId: string,
   ) {
     return await this.auditService.findByEntity(entityName, entityId);
+  }
+
+  @Get('all')
+  async getAllRecords() {
+    return await this.auditService.getAllRecords();
   }
 }

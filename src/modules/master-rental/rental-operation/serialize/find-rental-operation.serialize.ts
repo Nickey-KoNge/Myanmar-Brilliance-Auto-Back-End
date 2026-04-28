@@ -5,7 +5,7 @@ import { Expose, Transform, Type } from 'class-transformer';
 // -------------------------
 interface FlattenedObj {
   route?: { route_name?: string };
-  vehicle?: { vehicle_name?: string; plate_number?: string; image?: string };
+  vehicle?: { vehicle_name?: string; license_plate?: string; image?: string };
   driver?: {
     driver_name?: string;
     image?: string;
@@ -85,9 +85,9 @@ class RentalOperationItemDto {
 
   @Expose()
   @Transform(
-    ({ obj }: { obj: FlattenedObj }) => obj.vehicle?.plate_number || null,
+    ({ obj }: { obj: FlattenedObj }) => obj.vehicle?.license_plate || null,
   )
-  plate_number!: string | null;
+  license_plate!: string | null;
 
   @Expose()
   @Transform(({ obj }: { obj: FlattenedObj }) => obj.vehicle?.image || null)

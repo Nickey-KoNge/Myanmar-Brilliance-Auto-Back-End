@@ -43,10 +43,10 @@ export class GetRentalOperationSerialize {
 
   @Expose()
   @Transform(
-    ({ obj }: { obj: { vehicle?: { plate_number?: string | null } } }) =>
-      obj.vehicle?.plate_number || null,
+    ({ obj }: { obj: { vehicle?: { license_plate?: string | null } } }) =>
+      obj.vehicle?.license_plate || null,
   )
-  plate_number!: string | null;
+  license_plate!: string | null;
 
   @Expose()
   @Transform(
