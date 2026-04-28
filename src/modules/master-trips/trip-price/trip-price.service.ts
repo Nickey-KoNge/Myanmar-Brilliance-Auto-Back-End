@@ -5,6 +5,7 @@ import { TripPrice } from './entities/trip-price.entity';
 import { CreateTripPriceDto } from './dtos/create-trip-price.dto';
 import { UpdateTripPriceDto } from './dtos/update-trip-price.dto';
 import { PaginateTripPriceDto } from './dtos/paginate-trip-price.dto';
+import { start } from 'repl';
 
 @Injectable()
 export class TripPriceService {
@@ -42,8 +43,8 @@ export class TripPriceService {
     }
     if (search && search.trim() !== '') {
       queryBuilder.andWhere(
-        `route.route_name ILIKE :search \
-         OR vehicle_model_relation.model_name ILIKE :search \
+        `route.route_name ILIKE :search 
+         OR vehicle_model_relation.vehicle_model_name ILIKE :search 
          OR station_relation.station_name ILIKE :search`,
         { search: `%${search}%` },
       );
