@@ -324,4 +324,9 @@ export class MasterAuditService {
     await workbook.xlsx.write(res);
     res.end();
   }
+
+  async getAllRecords() {
+    const records = await this.auditRepository.find();
+    return records;
+  }
 }

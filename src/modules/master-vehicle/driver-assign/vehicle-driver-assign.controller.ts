@@ -7,13 +7,16 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateVehicleDriverAssignDto } from './dtos/create-vehicle-driver-assign.dto';
 import { VehicleDriverAssignService } from './vehicle-driver-assign.service';
 import { PaginateVehicleDriverAssignDto } from './dtos/paginate-vehicle-driver-assign.dto';
 import { UpdateVehicleDriverDto } from './dtos/update-vehicle-driver-assign.dto';
+import { AtGuard } from 'src/common/guards/at.guard';
 
 @Controller('master-vehicle/vehicle-driver-assign')
+@UseGuards(AtGuard)
 export class VehicleDriverAssignController {
   constructor(
     private readonly vehicleDriverAssignService: VehicleDriverAssignService,

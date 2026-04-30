@@ -52,6 +52,7 @@ export class VehicleModelService {
       throw new InternalServerErrorException('Failed to create vehicle model');
     }
   }
+  
   async findAll(query: PaginateVehicleModelDto) {
     const {
       limit = 10,
