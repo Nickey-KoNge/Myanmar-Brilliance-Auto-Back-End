@@ -186,117 +186,6 @@ export class RentalOpService {
 
     return op;
   }
-
-  // async update(
-  //   id: string,
-  //   dto: UpdateRentalOperationDto,
-  //   userId: string,
-  //   ID: string,
-  // ): Promise<RentalOperation> {
-  //   const existingOp = await this.rentalOpRepo.findOne({
-  //     where: { id },
-  //     relations: ['vehicle', 'vehicle.vehicle_model', 'route'],
-  //   });
-  //   if (!existingOp) throw new NotFoundException('Rental Operation not found');
-
-  //   if (
-  //     dto.trip_status === 'Completed' &&
-  //     existingOp.trip_status !== 'Completed'
-  //   ) {
-  //     try {
-  //       console.log('Finalizing Trip... Creating Finance Record for:', id);
-
-  //       // --- ၁။ Rental Amount သတ်မှတ်ခြင်း ---
-  //       const isCityTrip = existingOp.route?.route_name
-  //         ?.toLowerCase()
-  //         .includes('city');
-  //       const vModel = existingOp.vehicle?.vehicle_model;
-
-  //       const baseRate = isCityTrip
-  //         ? Number(vModel?.daily_trip_rate || 0)
-  //         : Number(vModel?.overnight_trip_rate || 0);
-
-  //       let overtimeAmount = 0;
-  //       const start = new Date(existingOp.start_time);
-  //       const end = new Date(dto.end_time || new Date());
-
-  //       const diffMs = end.getTime() - start.getTime();
-  //       const diffMins = Math.floor(diffMs / (1000 * 60)); // စုစုပေါင်းကြာချိန် (မိနစ်)
-
-  //       // Benchmark hours (City ဆို 12 နာရီ၊ နယ်ဆို 24 နာရီ စသဖြင့် သတ်မှတ်နိုင်သည်)
-  //       const benchmarkMins = isCityTrip ? 12 * 60 : 24 * 60;
-
-  //       if (diffMins > benchmarkMins) {
-  //         const extraMins = diffMins - benchmarkMins;
-  //         const ratePerHour = baseRate / (isCityTrip ? 12 : 24);
-  //         const ratePerMin = ratePerHour / 60;
-  //         overtimeAmount = Math.round(extraMins * ratePerMin);
-  //       }
-
-  //       // --- ၃။ Total တွက်ချက်ခြင်း ---
-  //       const refundAmount = Number(dto.amount || 0); // dto.amount ကို refund အဖြစ်ယူလျှင်
-  //       const total = baseRate + overtimeAmount - refundAmount;
-
-  //       console.log(
-  //         `Finalizing Trip: Base=${baseRate}, OT=${overtimeAmount}, Refund=${refundAmount}, Total=${total}`,
-  //       );
-
-  //       await this.tripFinanceService.create({
-  //         trip_id: id,
-  //         staff_id: ID,
-  //         rental_amount: String(baseRate),
-  //         overtime_amount: String(overtimeAmount),
-  //         refund_amount: String(refundAmount),
-  //         total: String(total),
-  //         payment_status: 'Pending',
-  //         status: 'Active',
-  //       });
-
-  //       console.log('TripFinance Created Successfully for Finalize');
-  //     } catch (finError) {
-  //       console.error('Failed to create Finance during Finalize:', finError);
-  //     }
-  //   }
-
-  //   const oldState = { ...existingOp };
-  //   const updatePayload = { ...dto } as Partial<RentalOperation>;
-
-  //   // Handle Scalar ID updates
-  //   if (dto.route_id) updatePayload.route_id = dto.route_id;
-  //   if (dto.vehicle_id) updatePayload.vehicle_id = dto.vehicle_id;
-  //   if (dto.driver_id) updatePayload.driver_id = dto.driver_id;
-  //   if (dto.station_id) updatePayload.station_id = dto.station_id;
-
-  //   if (Object.keys(updatePayload).length > 0) {
-  //     await this.rentalOpRepo.update(id, updatePayload);
-  //   }
-
-  //   const updatedOp = await this.findOne(id);
-
-  //   const cleanOldState = JSON.parse(JSON.stringify(oldState)) as Record<
-  //     string,
-  //     unknown
-  //   >;
-  //   const cleanNewState = JSON.parse(JSON.stringify(dto)) as Record<
-  //     string,
-  //     unknown
-  //   >;
-
-  //   const { oldVals, newVals } = getChanges(cleanOldState, cleanNewState);
-
-  //   if (Object.keys(newVals).length > 0) {
-  //     await this.auditService.logAction(
-  //       'rental_operation',
-  //       id,
-  //       'UPDATE',
-  //       oldVals,
-  //       newVals,
-  //       userId,
-  //     );
-  //   }
-
-  //   return updatedOp;
-  // }
   async update(
     id: string,
     dto: UpdateRentalOperationDto,
@@ -315,71 +204,103 @@ export class RentalOpService {
       existingOp.trip_status !== 'Completed'
     ) {
       try {
-        console.log('Finalizing Trip... Creating Finance Record for:', id);
-
         const routeName = existingOp.route?.route_name || 'Unknown Route';
         const isCityTrip = routeName.toLowerCase().includes('city');
-        const routeId = existingOp.route_id;
-
-        // 🔍 Terminal တွင် ဘယ် ID ဖြင့်ရှာနေလဲ ကြည့်ရန်
-        console.log('--- 🔍 DEBUG: IDs for Trip Price Search ---');
-        console.log(
-          `Route ID: ${routeId} (Name: ${routeName}, isCity: ${isCityTrip})`,
-        );
+        const routeId = dto.route_id || existingOp.route_id;
 
         let matchedTripPrice: TripPrice | null = null;
 
-        // 🛑 ပြင်ဆင်ချက်: vehicle_model_id ရှာသည့်ရှုပ်ထွေးသော Raw Query ကိုဖြုတ်ပြီး route_id ဖြင့်သာ တိုက်ရိုက်ရှာပါမည်
         if (routeId) {
+          const targetVehicleId = dto.vehicle_id || existingOp.vehicle_id;
+          let vModelId: string | undefined;
+
+          if (targetVehicleId) {
+            const vehicleInfo = (await this.rentalOpRepo.manager.findOne(
+              'Vehicle',
+              {
+                where: { id: targetVehicleId },
+                relations: ['vehicle_model'],
+              },
+            )) as unknown as {
+              vehicle_model?: { id: string };
+              vehicle_model_id?: string;
+            } | null;
+
+            vModelId =
+              vehicleInfo?.vehicle_model?.id || vehicleInfo?.vehicle_model_id;
+          }
+
+          const priceCondition: Record<string, string> = { route_id: routeId };
+          if (vModelId) {
+            priceCondition.vehicle_model_id = vModelId;
+          }
+
           matchedTripPrice = await this.rentalOpRepo.manager.findOne(
             TripPrice,
-            {
-              where: {
-                route_id: routeId,
-              },
-            },
+            { where: priceCondition as FindOptionsWhere<TripPrice> },
           );
         }
 
-        if (!matchedTripPrice) {
-          console.error(
-            '❌ ERROR: No matching row in trip_prices table for this Route ID!',
-          );
-        } else {
-          console.log(
-            `✅ Found Price -> Daily: ${matchedTripPrice.daily_trip_rate}, Overnight: ${matchedTripPrice.overnight_trip_rate}`,
-          );
-        }
+        // 💡 တွက်ချက်မှုအပိုင်း စတင်ခြင်း
+        const dailyCountValue = Number(
+          dto.daily_count ?? existingOp.daily_count ?? 1,
+        );
+        const overnightCountValue = Number(
+          dto.overnight_count ?? existingOp.overnight_count ?? 1,
+        );
 
-        // --- ၁။ Rental Amount (Base Rate) တွက်ချက်ခြင်း ---
-        const baseRate = isCityTrip
-          ? Number(matchedTripPrice?.daily_trip_rate || 0)
-          : Number(matchedTripPrice?.overnight_trip_rate || 0);
-
-        // --- ၂။ Overtime တွက်ချက်ခြင်း ---
+        let baseRate = 0;
         let overtimeAmount = 0;
+
         const start = new Date(existingOp.start_time || new Date());
         const end = new Date(dto.end_time || new Date());
 
-        const diffMs = end.getTime() - start.getTime();
-        const diffMins = Math.floor(diffMs / (1000 * 60)); // မိနစ်
+        if (isCityTrip) {
+          // ---------------------------------------------------------
+          // City Trip အတွက် (၁ ရက်ကို ၁၂ နာရီနှုန်းဖြင့် တွက်ချက်ခြင်း)
+          // ---------------------------------------------------------
+          const singleDayRate = Number(matchedTripPrice?.daily_trip_rate || 0);
+          baseRate = singleDayRate * dailyCountValue;
 
-        const benchmarkMins = isCityTrip ? 12 * 60 : 24 * 60;
+          const benchmarkMins = 12 * 60 * dailyCountValue;
+          const ratePerHour = singleDayRate / 12;
 
-        if (diffMins > benchmarkMins && baseRate > 0) {
-          const extraMins = diffMins - benchmarkMins;
-          const ratePerHour = baseRate / (isCityTrip ? 12 : 24);
-          const ratePerMin = ratePerHour / 60;
-          overtimeAmount = Math.round(extraMins * ratePerMin);
+          const diffMs = end.getTime() - start.getTime();
+          const diffMins = Math.floor(diffMs / (1000 * 60));
+
+          if (diffMins > benchmarkMins && ratePerHour > 0) {
+            const extraMins = diffMins - benchmarkMins;
+            const ratePerMin = ratePerHour / 60;
+            overtimeAmount = Math.round(extraMins * ratePerMin);
+          }
+        } else {
+          // ---------------------------------------------------------
+          // Overnight Trip အတွက် (၁ ရက်ကို ၂၄ နာရီနှုန်း အတိအကျဖြင့် တွက်ချက်ခြင်း)
+          // ---------------------------------------------------------
+          const singleNightRate = Number(
+            matchedTripPrice?.overnight_trip_rate || 0,
+          );
+          baseRate = singleNightRate * overnightCountValue;
+
+          // Benchmark တွက်ခြင်း (Count * 24 နာရီ)
+          const benchmarkMins = overnightCountValue * 24 * 60;
+
+          // OT အတွက် ၁ နာရီ Rate
+          const ratePerHour = singleNightRate / 24;
+
+          const diffMs = end.getTime() - start.getTime();
+          const diffMins = Math.floor(diffMs / (1000 * 60));
+
+          // စထွက်တဲ့အချိန်ကနေ သတ်မှတ်ထားတဲ့ နာရီပေါင်းထက် ကျော်လွန်သွားမှသာ OT တွက်မည်
+          if (diffMins > benchmarkMins && ratePerHour > 0) {
+            const extraMins = diffMins - benchmarkMins;
+            const ratePerMin = ratePerHour / 60;
+            overtimeAmount = Math.round(extraMins * ratePerMin);
+          }
         }
 
-        // --- ၃။ Total တွက်ချက်ခြင်း ---
         const refundAmount = Number(dto.amount || 0);
-        const total = baseRate + overtimeAmount - refundAmount;
-
-        console.log(
-          `✅ Finalizing Trip Result: Base=${baseRate}, OT=${overtimeAmount}, Refund=${refundAmount}, Total=${total}`,
-        );
+        const totalAmountValue = baseRate + overtimeAmount - refundAmount;
 
         await this.tripFinanceService.create({
           trip_id: id,
@@ -387,23 +308,41 @@ export class RentalOpService {
           rental_amount: String(baseRate),
           overtime_amount: String(overtimeAmount),
           refund_amount: String(refundAmount),
-          total: String(total),
+          total: String(totalAmountValue),
           payment_status: 'Pending',
           status: 'Active',
         });
       } catch (finError) {
-        console.error('Failed to create Finance during Finalize:', finError);
+        console.error('Finance Creation Error:', finError);
       }
     }
 
-    // --- ပုံမှန် Update Logic ---
     const oldState = { ...existingOp };
-    const updatePayload = { ...dto } as Partial<RentalOperation>;
+    const updatePayload: Partial<RentalOperation> = {};
 
     if (dto.route_id) updatePayload.route_id = dto.route_id;
     if (dto.vehicle_id) updatePayload.vehicle_id = dto.vehicle_id;
     if (dto.driver_id) updatePayload.driver_id = dto.driver_id;
     if (dto.station_id) updatePayload.station_id = dto.station_id;
+    if (dto.trip_status) updatePayload.trip_status = dto.trip_status;
+    if (dto.status) updatePayload.status = dto.status;
+
+    if (dto.daily_count !== undefined)
+      updatePayload.daily_count = dto.daily_count;
+    if (dto.overnight_count !== undefined)
+      updatePayload.overnight_count = dto.overnight_count;
+
+    if (dto.description) updatePayload.description = dto.description;
+    if (dto.start_time) updatePayload.start_time = new Date(dto.start_time);
+    if (dto.end_time) updatePayload.end_time = new Date(dto.end_time);
+    if (dto.start_odo) updatePayload.start_odo = dto.start_odo;
+    if (dto.end_odo) updatePayload.end_odo = dto.end_odo;
+    if (dto.start_battery) updatePayload.start_battery = dto.start_battery;
+    if (dto.end_battery) updatePayload.end_battery = dto.end_battery;
+    if (dto.power_station_name)
+      updatePayload.power_station_name = dto.power_station_name;
+    if (dto.kw) updatePayload.kw = dto.kw;
+    if (dto.amount) updatePayload.amount = dto.amount;
 
     if (Object.keys(updatePayload).length > 0) {
       await this.rentalOpRepo.update(id, updatePayload);
@@ -411,7 +350,6 @@ export class RentalOpService {
 
     const updatedOp = await this.findOne(id);
 
-    // Any မပါစေရန် Record<string, unknown> ကို သုံးထားသည်
     const cleanOldState = JSON.parse(JSON.stringify(oldState)) as Record<
       string,
       unknown
@@ -420,7 +358,6 @@ export class RentalOpService {
       string,
       unknown
     >;
-
     const { oldVals, newVals } = getChanges(cleanOldState, cleanNewState);
 
     if (Object.keys(newVals).length > 0) {

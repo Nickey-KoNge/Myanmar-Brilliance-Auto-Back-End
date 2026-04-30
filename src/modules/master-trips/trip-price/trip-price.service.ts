@@ -5,7 +5,7 @@ import { TripPrice } from './entities/trip-price.entity';
 import { CreateTripPriceDto } from './dtos/create-trip-price.dto';
 import { UpdateTripPriceDto } from './dtos/update-trip-price.dto';
 import { PaginateTripPriceDto } from './dtos/paginate-trip-price.dto';
-import { start } from 'repl';
+import { BulkCreateTripPriceDto } from './dtos/multi-create-trip-price.dto';
 
 @Injectable()
 export class TripPriceService {
@@ -141,5 +141,21 @@ export class TripPriceService {
   async remove(id: string): Promise<void> {
     const record = await this.findOne(id);
     await this.tpRepo.remove(record);
+  }
+  async createBulk(dto: BulkCreateTripPriceDto): Promise<TripPrice[]> {
+    const { route_id, station_id, prices } = dto;
+
+    const recordsToCreate = prices.map((price) => {
+      return this.tpRepo.create({
+        route_id,
+        station_id,
+        vehicle_model_id: price.vehicle_model_id,
+        daily_trip_rate: price.daily_trip_rate,
+        overnight_trip_rate: price.overnight_trip_rate,
+        // status တွေ default ပါရင် ဒီမှာ ထည့်ပေးလို့ရပါတယ် (e.g., status: 'Active')
+      });
+    });
+
+    return await this.tpRepo.save(recordsToCreate);
   }
 }
